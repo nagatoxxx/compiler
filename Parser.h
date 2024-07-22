@@ -40,8 +40,7 @@ public:
     ast::ASTNodePtr program(); // main parsing function
     ast::ASTNodePtr statement();
     ast::ASTNodePtr declaration_stmt();
-    ast::ASTNodePtr if_stmt();
-    ast::ASTNodePtr else_stmt();
+    ast::ASTNodePtr branch_stmt();
     ast::ASTNodePtr while_stmt();
     ast::ASTNodePtr assignment_stmt();
 
@@ -58,7 +57,26 @@ public:
     ast::ASTNodePtr access_tail(const ast::ASTNodePtr& left);
     ast::ASTNodePtr primary();
 
-    ast::ASTNodePtr body();
+    // parsing body of a statement
+    template <typename T>
+        requires(std::is_same_v<T, ast::BodyThen> || std::is_same_v<T, ast::BodyElse>)
+    ast::ASTNodePtr body()
+    {
+        ast::ASTNodePtr body = std::make_shared<ast::ASTNode>(T());
+        if (m_ct->getKind() == TokenKind::LBRACE) {
+            eat();
+            body->addChild(std::make_shared<ast::ASTNode>(ast::BlockStart()));
+            while (m_ct->getKind() != TokenKind::RBRACE) {
+                body->addChild(statement());
+            }
+            body->addChild(std::make_shared<ast::ASTNode>(ast::BlockEnd()));
+            eat();
+        }
+        else
+            body->addChild(statement());
+
+        return body;
+    }
 
     // flow control
 

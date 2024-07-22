@@ -2,6 +2,8 @@
 
 #include "AST.h"
 #include "SymbolTable.h"
+#include <stack>
+#include <utility>
 
 // works with AST, that was built by the parser
 class SemanticAnalyzer
@@ -19,24 +21,18 @@ public:
 
 private:
     // build symbol table
-    // check control constructions
+    // check control flow constructions
     void traversalPreorder(const ast::ASTNodePtr& node);
 
-    void IdResolution(const ast::ASTNodePtr& node);
-    void flowControlCheck(const ast::ASTNodePtr& node);
+    void resolveId(const ast::ASTNodePtr& node);
 
     // parses types, adds implicit casts
     void traversalPostorder(ast::ASTNodePtr& node);
 
-    void typeCheck(ast::ASTNodePtr& node);
+    void resolveTypes(ast::ASTNodePtr& node);
 
     ts::Type getType(const ast::ASTNodePtr& node);
 
 private:
     SymbolTable m_symbolTable;
-
-    struct State
-    {
-        bool ifNodeVisited = false;
-    } m_state;
 };

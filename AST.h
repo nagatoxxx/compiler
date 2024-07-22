@@ -113,19 +113,13 @@ public:
 
 // if statement
 // first child - condition
-// second child - body
-class IfStatement
+// second child - then body
+// third child - else body
+class Branch
 {
 public:
-    IfStatement() {}
-    ~IfStatement() {}
-};
-
-class ElseStatement
-{
-public:
-    ElseStatement() {}
-    ~ElseStatement() {}
+    Branch() {}
+    ~Branch() {}
 };
 
 class Condition
@@ -135,11 +129,18 @@ public:
     ~Condition() {}
 };
 
-class Body
+class BodyThen
 {
 public:
-    Body() {}
-    ~Body() {}
+    BodyThen() {}
+    ~BodyThen() {}
+};
+
+class BodyElse
+{
+public:
+    BodyElse() {}
+    ~BodyElse() {}
 };
 
 // unused
@@ -192,7 +193,7 @@ private:
 class ASTNode;
 
 using ASTNodeData = std::
-    variant<BinaryExpr, UnaryExpr, Float, Integer, Root, Declaration, Identifier, IfStatement, Condition, Body, Return, BlockStart, BlockEnd, WhileLoop, ElseStatement, ImplicitTypeCast>;
+    variant<BinaryExpr, UnaryExpr, Float, Integer, Root, Declaration, Identifier, Branch, Condition, BodyThen, BodyElse, Return, BlockStart, BlockEnd, WhileLoop, ImplicitTypeCast>;
 using ASTNodePtr  = std::shared_ptr<ASTNode>;
 using ASTNodeWPtr = std::weak_ptr<ASTNode>;
 
@@ -264,17 +265,17 @@ private:
             else if constexpr (std::is_same_v<T, ast::Identifier>) {
                 return std::string("Identifier: ") + arg.getName();
             }
-            else if constexpr (std::is_same_v<T, ast::IfStatement>) {
-                return "IfStatement";
-            }
-            else if constexpr (std::is_same_v<T, ast::ElseStatement>) {
-                return "ElseStatement";
+            else if constexpr (std::is_same_v<T, ast::Branch>) {
+                return "Branch";
             }
             else if constexpr (std::is_same_v<T, ast::Condition>) {
                 return "Condition";
             }
-            else if constexpr (std::is_same_v<T, ast::Body>) {
-                return "Body";
+            else if constexpr (std::is_same_v<T, ast::BodyThen>) {
+                return "BodyThen";
+            }
+            else if constexpr (std::is_same_v<T, ast::BodyElse>) {
+                return "BodyElse";
             }
             else if constexpr (std::is_same_v<T, ast::Return>) {
                 return "Return";

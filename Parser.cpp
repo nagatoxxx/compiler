@@ -59,10 +59,10 @@ ast::ASTNodePtr Parser::statement()
         return declaration_stmt();
     }
     else if (kind == TokenKind::KW_IF) {
-        return if_stmt();
+        return branch_stmt();
     }
     else if (kind == TokenKind::KW_ELSE) {
-        return else_stmt();
+        throw SemanticError("Else statement must be preceded by an if statement");
     }
     else if (kind == TokenKind::KW_WHILE) {
         return while_stmt();
@@ -102,7 +102,7 @@ ast::ASTNodePtr Parser::declaration_stmt()
     return decl;
 }
 
-ast::ASTNodePtr Parser::if_stmt()
+ast::ASTNodePtr Parser::branch_stmt()
 {
     Location l = m_ct->getLoc();
     eat();
@@ -113,23 +113,17 @@ ast::ASTNodePtr Parser::if_stmt()
 
     eat(TokenKind::RPAREN);
 
-    ast::ASTNodePtr if_stmt = std::make_shared<ast::ASTNode>(ast::IfStatement());
+    ast::ASTNodePtr if_stmt = std::make_shared<ast::ASTNode>(ast::Branch());
     if_stmt->addChild(cond);
-    if_stmt->addChild(body());
+    if_stmt->addChild(body<ast::BodyThen>()); // then body
     if_stmt->setLocation(l);
 
+    if (m_ct->getKind() == TokenKind::KW_ELSE) {
+        eat();
+        if_stmt->addChild(body<ast::BodyElse>()); // else body
+    }
+
     return if_stmt;
-}
-
-ast::ASTNodePtr Parser::else_stmt()
-{
-    ast::ASTNodePtr else_stmt = std::make_shared<ast::ASTNode>(ast::ElseStatement());
-    else_stmt->setLocation(m_ct->getLoc());
-    eat();
-
-    else_stmt->addChild(body());
-
-    return else_stmt;
 }
 
 ast::ASTNodePtr Parser::while_stmt()
@@ -143,7 +137,7 @@ ast::ASTNodePtr Parser::while_stmt()
 
     ast::ASTNodePtr while_stmt = std::make_shared<ast::ASTNode>(ast::WhileLoop());
     while_stmt->addChild(cond);
-    while_stmt->addChild(body());
+    while_stmt->addChild(body<ast::BodyThen>());
     while_stmt->setLocation(l);
 
     return while_stmt;
@@ -552,24 +546,6 @@ ast::ASTNodePtr Parser::primary()
         default:
             error();
     }
-}
-
-ast::ASTNodePtr Parser::body()
-{
-    ast::ASTNodePtr body = std::make_shared<ast::ASTNode>(ast::Body());
-    if (m_ct->getKind() == TokenKind::LBRACE) {
-        eat();
-        body->addChild(std::make_shared<ast::ASTNode>(ast::BlockStart()));
-        while (m_ct->getKind() != TokenKind::RBRACE) {
-            body->addChild(statement());
-        }
-        body->addChild(std::make_shared<ast::ASTNode>(ast::BlockEnd()));
-        eat();
-    }
-    else
-        body->addChild(statement());
-
-    return body;
 }
 
 void Parser::error()

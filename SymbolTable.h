@@ -27,15 +27,6 @@ public:
 
     void insert(const std::string& name, const Symbol& sym);
 
-#ifdef DEBUG
-    void print()
-    {
-        for (auto& [name, sym] : m_symbols) {
-            std::cout << name << ": " << sym << std::endl;
-        }
-    }
-#endif
-
     std::shared_ptr<Symbol> get(const std::string& name);
     std::shared_ptr<Scope>  getParent() const { return m_parent; }
 
@@ -54,16 +45,6 @@ public:
     void enterScope(void* scope);
     void exitScope();
     void insert(const std::string& name, const Symbol& sym);
-
-#ifdef DEBUG
-    void print()
-    {
-        for (const auto& [ptr, s] : m_scopes) {
-            std::cout << ptr << ":\n";
-            s->print();
-        }
-    }
-#endif
 
     std::shared_ptr<Symbol> find(const std::string& name);
     bool                    inThisScope(const std::string& name);

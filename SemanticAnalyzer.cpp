@@ -17,9 +17,7 @@ void SemanticAnalyzer::analyze(ast::ASTNodePtr& node)
     traversalPreorder(node);
 
 #ifdef DEBUG
-    std::cout << "SemanticAnalyzer::buildSymbolTable() success\n\n";
-    std::cout << "SymbolTable:\n";
-    m_symbolTable.print();
+    std::cout << "SemanticAnalyzer::buildSymbolTable() success\n";
     std::cout << "SemanticAnalyzer::typeCheck() called\n\n";
 #endif
 
@@ -33,15 +31,14 @@ void SemanticAnalyzer::analyze(ast::ASTNodePtr& node)
 
 void SemanticAnalyzer::traversalPreorder(const ast::ASTNodePtr& node)
 {
-    IdResolution(node);
-    flowControlCheck(node);
+    resolveId(node);
 
     for (const ast::ASTNodePtr& c : node->getChildren()) {
         traversalPreorder(c);
     }
 }
 
-void SemanticAnalyzer::IdResolution(const ast::ASTNodePtr& node)
+void SemanticAnalyzer::resolveId(const ast::ASTNodePtr& node)
 {
     std::visit(
         [&node, this](auto&& arg) -> void
@@ -78,38 +75,13 @@ void SemanticAnalyzer::IdResolution(const ast::ASTNodePtr& node)
         node->getData());
 }
 
-// TODO
-void SemanticAnalyzer::flowControlCheck(const ast::ASTNodePtr& node)
-{
-    std::visit(
-        [&node, this](auto&& arg)
-        {
-            using T = std::decay_t<decltype(arg)>;
-
-            if constexpr (std::is_same_v<T, ast::IfStatement>) {
-                m_state.ifNodeVisited = true;
-            }
-            else if constexpr (std::is_same_v<T, ast::ElseStatement>) {
-                if (!m_state.ifNodeVisited) {
-                    throw SemanticError(node->getLocation(), "else statement must be preceded by an if statement");
-                }
-                m_state.ifNodeVisited = false;
-            }
-            // else if constexpr (std::is_same_v<T, ast::BlockStart>) {
-            // }
-            // else if constexpr (std::is_same_v<T, ast::BlockEnd>) {
-            // }
-        },
-        node->getData());
-}
-
 void SemanticAnalyzer::traversalPostorder(ast::ASTNodePtr& node)
 {
     for (ast::ASTNodePtr& c : node->getChildren()) {
         traversalPostorder(c);
     }
 
-    typeCheck(node);
+    resolveTypes(node);
 }
 
 ts::Type SemanticAnalyzer::getType(const ast::ASTNodePtr& node)
@@ -133,7 +105,7 @@ ts::Type SemanticAnalyzer::getType(const ast::ASTNodePtr& node)
         node->getData());
 }
 
-void SemanticAnalyzer::typeCheck(ast::ASTNodePtr& node)
+void SemanticAnalyzer::resolveTypes(ast::ASTNodePtr& node)
 {
     std::visit(
         [&node, this](auto&& arg) mutable -> void
