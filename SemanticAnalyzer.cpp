@@ -13,15 +13,18 @@ void SemanticAnalyzer::analyze(ast::ASTNodePtr& node)
 #ifdef DEBUG
     std::cout << "SemanticAnalyzer::buildSymbolTable() called\n";
 #endif
+
     traversalPreorder(node);
 
 #ifdef DEBUG
+    std::cout << "SemanticAnalyzer::buildSymbolTable() success\n\n";
+    std::cout << "SymbolTable:\n";
+    m_symbolTable.print();
     std::cout << "SemanticAnalyzer::typeCheck() called\n\n";
 #endif
 
-
-
     traversalPostorder(node);
+
 #ifdef DEBUG
     ast::PrintAST(node);
     std::cout << "\nSemanticAnalyzer::typeCheck() success\n";
@@ -30,6 +33,7 @@ void SemanticAnalyzer::analyze(ast::ASTNodePtr& node)
 
 void SemanticAnalyzer::traversalPreorder(const ast::ASTNodePtr& node)
 {
+    IdResolution(node);
     flowControlCheck(node);
 
     for (const ast::ASTNodePtr& c : node->getChildren()) {
@@ -45,35 +49,36 @@ void SemanticAnalyzer::IdResolution(const ast::ASTNodePtr& node)
             using T = std::decay_t<decltype(arg)>;
 
             if constexpr (std::is_same_v<T, ast::Declaration>) {
-                const ast::Identifier* id = std::get_if<ast::Identifier>(&node->getChildren().front()->getData());
+                ast::Identifier* id = std::get_if<ast::Identifier>(&node->getChildren().front()->getData());
 
                 ts::Type type = arg.getType();
 
-                if (m_scopes.find(id->getName())) {
+                if (m_symbolTable.inThisScope(id->getName())) {
                     throw SemanticError(node->getLocation(),
                                         "symbol already declared in this "
                                         "scope");
                 }
 
-                m_scopes.insertSymbol(id->getName(), Symbol{type, ts::TypeSize[type]});
+                m_symbolTable.insert(id->getName(), Symbol{type, ts::TypeSize[type]});
             }
             else if constexpr (std::is_same_v<T, ast::Identifier>) {
                 std::string name = arg.getName();
 
-                if (!m_scopes.find(name)) {
+                if (!m_symbolTable.find(name)) {
                     throw SemanticError(node->getLocation(), "unknown identifier: " + name);
                 }
             }
             else if constexpr (std::is_same_v<T, ast::BlockStart>) {
-                m_scopes.enterScope();
+                m_symbolTable.enterScope(reinterpret_cast<void*>(&arg));
             }
             else if constexpr (std::is_same_v<T, ast::BlockEnd>) {
-                m_scopes.exitScope();
+                m_symbolTable.exitScope();
             }
         },
         node->getData());
 }
 
+// TODO
 void SemanticAnalyzer::flowControlCheck(const ast::ASTNodePtr& node)
 {
     std::visit(
@@ -104,9 +109,7 @@ void SemanticAnalyzer::traversalPostorder(ast::ASTNodePtr& node)
         traversalPostorder(c);
     }
 
-    // TODO переработать проверку типов
     typeCheck(node);
-    IdResolution(node);
 }
 
 ts::Type SemanticAnalyzer::getType(const ast::ASTNodePtr& node)
@@ -117,7 +120,7 @@ ts::Type SemanticAnalyzer::getType(const ast::ASTNodePtr& node)
             using T = std::decay_t<decltype(arg)>;
 
             if constexpr (std::is_same_v<T, ast::Identifier>) {
-                return m_scopes.find(arg.getName())->type;
+                return m_symbolTable.find(arg.getName())->type;
             }
             else if constexpr (std::disjunction_v<std::is_same<T, ast::Integer>,
                                                   std::is_same<T, ast::Float>,
@@ -203,9 +206,7 @@ void SemanticAnalyzer::typeCheck(ast::ASTNodePtr& node)
                     ast::ASTNodePtr id   = node->getChildren().front();
                     ast::ASTNodePtr init = node->getChildren().back();
 
-                    std::cout << "start\n";
                     bool equalTypes = getType(id) == getType(init);
-                    std::cout << "end\n";
 
                     if (!(equalTypes || isImplicitlyCastable(getType(init), getType(id)))) {
                         throw SemanticError(node->getLocation(), "types do not match");
@@ -223,10 +224,10 @@ void SemanticAnalyzer::typeCheck(ast::ASTNodePtr& node)
                 }
             }
             else if constexpr (std::is_same_v<T, ast::BlockStart>) {
-                m_scopes.enterScope();
+                m_symbolTable.enterScope(reinterpret_cast<void*>(&arg));
             }
             else if constexpr (std::is_same_v<T, ast::BlockEnd>) {
-                m_scopes.exitScope();
+                m_symbolTable.exitScope();
             }
         },
         node->getData());

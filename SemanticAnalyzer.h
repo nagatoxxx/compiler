@@ -7,7 +7,7 @@
 class SemanticAnalyzer
 {
 public:
-    SemanticAnalyzer() : m_scopes() {}
+    SemanticAnalyzer() : m_symbolTable() { m_symbolTable.enterScope(0); }
     ~SemanticAnalyzer() {}
 
     SemanticAnalyzer(const SemanticAnalyzer&)            = delete;
@@ -33,7 +33,7 @@ private:
     ts::Type getType(const ast::ASTNodePtr& node);
 
 private:
-    Scopes m_scopes;
+    SymbolTable m_symbolTable;
 
     struct State
     {

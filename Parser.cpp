@@ -84,9 +84,12 @@ ast::ASTNodePtr Parser::declaration_stmt()
 
     if (m_ct->getKind() != TokenKind::IDENTIFIER) error();
 
-    ast::ASTNodePtr id = std::make_shared<ast::ASTNode>(ast::Identifier(m_ct->getString()));
-    decl->addChild(id);
+    ast::Identifier id = ast::Identifier(m_ct->getString());
+    id.setType(TOK_TO_TYPE(kind));
+
+    decl->addChild(std::make_shared<ast::ASTNode>(id));
     decl->setLocation(m_ct->getLoc());
+
     eat();
 
     ast::ASTNodePtr ex = nullptr;

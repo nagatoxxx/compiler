@@ -68,7 +68,7 @@ public:
     std::string getName() const { return m_name; }
 
     ts::Type getType() const { return m_type; }
-    // void     setType(ts::Type type) { m_type = type; }
+    void     setType(ts::Type type) { m_type = type; }
 
 private:
     ts::Type    m_type;
@@ -195,20 +195,6 @@ using ASTNodeData = std::
     variant<BinaryExpr, UnaryExpr, Float, Integer, Root, Declaration, Identifier, IfStatement, Condition, Body, Return, BlockStart, BlockEnd, WhileLoop, ElseStatement, ImplicitTypeCast>;
 using ASTNodePtr  = std::shared_ptr<ASTNode>;
 using ASTNodeWPtr = std::weak_ptr<ASTNode>;
-
-// template <typename T, typename V>
-// struct contains;
-//
-// template <typename T, typename... Us>
-// struct contains<T, std::variant<Us...>> : std::disjunction<std::is_same<T, Us>...>
-// {
-// };
-//
-// template <typename T>
-// concept Node = contains<T, ASTNodeData>::value;
-//
-// template <typename N>
-// concept NodeWithType = Node<N> || requires(N n) { n.getType(); };
 
 class ASTNode : public std::enable_shared_from_this<ASTNode>
 {
