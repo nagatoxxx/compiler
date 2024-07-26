@@ -18,14 +18,13 @@ void SemanticAnalyzer::analyze(ast::ASTNodePtr& node)
 
 #ifdef DEBUG
     std::cout << "SemanticAnalyzer::buildSymbolTable() success\n";
-    std::cout << "SemanticAnalyzer::typeCheck() called\n\n";
+    std::cout << "SemanticAnalyzer::typeCheck() called\n";
 #endif
 
     traversalPostorder(node);
 
 #ifdef DEBUG
-    ast::PrintAST(node);
-    std::cout << "\nSemanticAnalyzer::typeCheck() success\n";
+    std::cout << "SemanticAnalyzer::typeCheck() success\n";
 #endif
 }
 
@@ -56,7 +55,14 @@ void SemanticAnalyzer::resolveId(const ast::ASTNodePtr& node)
                                         "scope");
                 }
 
-                m_symbolTable.insert(id->getName(), Symbol{type, ts::TypeSize[type]});
+                Symbol s{type, ts::TypeSize[type], 0, 0};
+
+                // if id is initialized
+                if (node->getChildren().size() == 2) {
+                    SYMBOL_SET_FLAG(s, SYMBOL_FLAG_INITIALIZED);
+                }
+
+                m_symbolTable.insert(id->getName(), s);
             }
             else if constexpr (std::is_same_v<T, ast::Identifier>) {
                 std::string name = arg.getName();
@@ -66,7 +72,7 @@ void SemanticAnalyzer::resolveId(const ast::ASTNodePtr& node)
                 }
             }
             else if constexpr (std::is_same_v<T, ast::BlockStart>) {
-                m_symbolTable.enterScope(reinterpret_cast<void*>(&arg));
+                m_symbolTable.enterScope(arg.getScopeId());
             }
             else if constexpr (std::is_same_v<T, ast::BlockEnd>) {
                 m_symbolTable.exitScope();
@@ -96,6 +102,7 @@ ts::Type SemanticAnalyzer::getType(const ast::ASTNodePtr& node)
             }
             else if constexpr (std::disjunction_v<std::is_same<T, ast::Integer>,
                                                   std::is_same<T, ast::Float>,
+                                                  std::is_same<T, ast::Boolean>,
                                                   std::is_same<T, ast::BinaryExpr>>) {
                 return arg.getType();
             }
@@ -120,10 +127,7 @@ void SemanticAnalyzer::resolveTypes(ast::ASTNodePtr& node)
                 ast::ASTNodePtr maxPriority = std::ranges::max(left,
                                                                right,
                                                                {},
-                                                               [this](auto n)
-                                                               {
-                                                                   return ts::TypePrecedence[getType(n)];
-                                                               });
+                                                               [this](auto n) { return ts::TypePrecedence[getType(n)]; });
 
                 // node with lowest type priority
                 ast::ASTNodePtr minPriority = (maxPriority == left) ? right : left;
@@ -196,7 +200,7 @@ void SemanticAnalyzer::resolveTypes(ast::ASTNodePtr& node)
                 }
             }
             else if constexpr (std::is_same_v<T, ast::BlockStart>) {
-                m_symbolTable.enterScope(reinterpret_cast<void*>(&arg));
+                m_symbolTable.enterScope(arg.getScopeId());
             }
             else if constexpr (std::is_same_v<T, ast::BlockEnd>) {
                 m_symbolTable.exitScope();

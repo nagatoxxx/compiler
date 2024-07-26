@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sstream>
 
+#include "Interpreter.h"
 #include "Lexer.h"
 #include "Parser.h"
 #include "SemanticAnalyzer.h"
@@ -60,14 +61,17 @@ int main(int argc, char* argv[])
         Parser          parser;
         ast::ASTNodePtr tree = parser.parse(tokens);
 
-#ifdef DEBUG
-        std::cout << "AST:\n";
-        ast::PrintAST(tree);
-        std::cout << '\n';
-#endif
-
         SemanticAnalyzer sa;
         sa.analyze(tree);
+
+#ifdef DEBUG
+        std::cout << "AST:\n";
+        PrintAST(tree);
+#endif
+
+        Interpreter interpreter(std::move(sa.getSymbolTable()));
+        interpreter.interpret(tree);
+
     } catch (const LexicalError& e) {
         std::cerr << "Lexical error: " << e.what() << '\n';
         printCodeLine(e.getLocation(), buf);

@@ -1,9 +1,8 @@
-#include "AST.h"
-
 #ifdef DEBUG
 #include <iostream>
 #endif
 
+#include "AST.h"
 #include "Common.h"
 #include "Parser.h"
 
@@ -168,6 +167,10 @@ ast::ASTNodePtr Parser::expr()
             [[fallthrough]];
         case TokenKind::IDENTIFIER:
             [[fallthrough]];
+        case TokenKind::KW_TRUE:
+            [[fallthrough]];
+        case TokenKind::KW_FALSE:
+            [[fallthrough]];
         case TokenKind::LPAREN:
             [[fallthrough]];
         case TokenKind::MINUS:
@@ -185,6 +188,10 @@ ast::ASTNodePtr Parser::relation_expr()
         case TokenKind::FLOATING_CONSTANT:
             [[fallthrough]];
         case TokenKind::IDENTIFIER:
+            [[fallthrough]];
+        case TokenKind::KW_TRUE:
+            [[fallthrough]];
+        case TokenKind::KW_FALSE:
             [[fallthrough]];
         case TokenKind::LPAREN:
             [[fallthrough]];
@@ -300,6 +307,10 @@ ast::ASTNodePtr Parser::additive_expr()
             [[fallthrough]];
         case TokenKind::IDENTIFIER:
             [[fallthrough]];
+        case TokenKind::KW_TRUE:
+            [[fallthrough]];
+        case TokenKind::KW_FALSE:
+            [[fallthrough]];
         case TokenKind::LPAREN:
             [[fallthrough]];
         case TokenKind::MINUS:
@@ -360,6 +371,10 @@ ast::ASTNodePtr Parser::multiplicative_expr()
         case TokenKind::FLOATING_CONSTANT:
             [[fallthrough]];
         case TokenKind::IDENTIFIER:
+            [[fallthrough]];
+        case TokenKind::KW_TRUE:
+            [[fallthrough]];
+        case TokenKind::KW_FALSE:
             [[fallthrough]];
         case TokenKind::LPAREN:
             [[fallthrough]];
@@ -443,6 +458,14 @@ ast::ASTNodePtr Parser::unary_expr()
         {
             return access_expr();
         }
+        case TokenKind::KW_TRUE:
+        {
+            return access_expr();
+        }
+        case TokenKind::KW_FALSE:
+        {
+            return access_expr();
+        }
         default:
             error();
     }
@@ -457,6 +480,10 @@ ast::ASTNodePtr Parser::access_expr()
         case TokenKind::LPAREN:
             [[fallthrough]];
         case TokenKind::INTEGER_CONSTANT:
+            [[fallthrough]];
+        case TokenKind::KW_TRUE:
+            [[fallthrough]];
+        case TokenKind::KW_FALSE:
             [[fallthrough]];
         case TokenKind::FLOATING_CONSTANT:
         {
@@ -542,6 +569,20 @@ ast::ASTNodePtr Parser::primary()
             ast::ASTNodePtr ex = expr();
             eat(TokenKind::RPAREN);
             return ex;
+        }
+        case TokenKind::KW_TRUE:
+        {
+            ast::ASTNodePtr true_ = std::make_shared<ast::ASTNode>(ast::Boolean(true));
+            true_->setLocation(m_ct->getLoc());
+            eat();
+            return true_;
+        }
+        case TokenKind::KW_FALSE:
+        {
+            ast::ASTNodePtr false_ = std::make_shared<ast::ASTNode>(ast::Boolean(false));
+            false_->setLocation(m_ct->getLoc());
+            eat();
+            return false_;
         }
         default:
             error();

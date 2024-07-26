@@ -1,9 +1,14 @@
 #include "SymbolTable.h"
+#include <iostream>
 
 //=====----- Scope class -----=====//
 void Scope::insert(const std::string& name, const Symbol& sym)
 {
     m_symbols[name] = std::make_shared<Symbol>(sym);
+    if (!m_global) {
+        m_currentOffset += sym.size;
+        m_symbols[name]->offset = m_currentOffset;
+    }
 }
 
 std::shared_ptr<Symbol> Scope::get(const std::string& name)
@@ -16,12 +21,12 @@ std::shared_ptr<Symbol> Scope::get(const std::string& name)
 }
 
 //=====----- SymbolTable class -----=====//
-void SymbolTable::enterScope(void* scope)
+void SymbolTable::enterScope(std::size_t id)
 {
-    if (!m_scopes[scope]) {
-        m_scopes[scope] = std::make_shared<Scope>(m_currentScope);
+    if (!m_scopes[id]) {
+        m_scopes[id] = std::make_shared<Scope>(m_currentScope);
     }
-    m_currentScope = m_scopes[scope];
+    m_currentScope = m_scopes[id];
 }
 
 void SymbolTable::exitScope()
@@ -38,8 +43,8 @@ void SymbolTable::insert(const std::string& name, const Symbol& sym)
 
 std::shared_ptr<Symbol> SymbolTable::find(const std::string& name)
 {
-    for (auto it = m_currentScope; it; it = it->getParent()) {
-        if (auto sym = it->get(name)) {
+    for (std::shared_ptr<Scope> it = m_currentScope; it; it = it->getParent()) {
+        if (std::shared_ptr<Symbol> sym = it->get(name)) {
             return sym;
         }
     }

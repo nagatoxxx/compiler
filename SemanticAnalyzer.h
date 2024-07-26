@@ -1,15 +1,20 @@
 #pragma once
 
-#include "AST.h"
-#include "SymbolTable.h"
 #include <stack>
 #include <utility>
+
+#include "AST.h"
+#include "SymbolTable.h"
 
 // works with AST, that was built by the parser
 class SemanticAnalyzer
 {
 public:
-    SemanticAnalyzer() : m_symbolTable() { m_symbolTable.enterScope(0); }
+    SemanticAnalyzer() : m_symbolTable()
+    {
+        m_symbolTable.enterScope(0);
+        m_symbolTable[0]->makeGlobal();
+    }
     ~SemanticAnalyzer() {}
 
     SemanticAnalyzer(const SemanticAnalyzer&)            = delete;
@@ -18,6 +23,8 @@ public:
     SemanticAnalyzer& operator=(SemanticAnalyzer&&)      = delete;
 
     void analyze(ast::ASTNodePtr& node);
+
+    SymbolTable& getSymbolTable() { return m_symbolTable; }
 
 private:
     // build symbol table

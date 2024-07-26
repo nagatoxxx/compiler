@@ -103,6 +103,20 @@ private:
     const ts::Type m_type = ts::Type::int_t;
 };
 
+class Boolean
+{
+public:
+    Boolean(bool value) : m_value(value) {}
+    ~Boolean() {}
+
+    bool     getValue() const { return m_value; }
+    ts::Type getType() const { return m_type; }
+
+private:
+    bool           m_value;
+    const ts::Type m_type = ts::Type::bool_t;
+};
+
 // main node
 class Root
 {
@@ -143,6 +157,13 @@ public:
     ~BodyElse() {}
 };
 
+class BodyFunction
+{
+public:
+    BodyFunction() {}
+    ~BodyFunction() {}
+};
+
 // unused
 class Return
 {
@@ -154,9 +175,23 @@ public:
 class BlockStart
 {
 public:
-    BlockStart() {}
+    BlockStart() : m_id(++ID) {}
     ~BlockStart() {}
+
+    std::size_t getScopeId() const { return m_scopeId; }
+
+    bool isInFunction() const { return m_inFunction; }
+    void setInFunction(bool inFunction) { m_inFunction = inFunction; }
+
+    static std::size_t ID;
+
+private:
+    std::size_t m_scopeId;
+    std::size_t m_id;
+    bool        m_inFunction = false;
 };
+
+inline std::size_t BlockStart::ID = 0;
 
 // while loop statement
 // first child - condition
@@ -193,7 +228,7 @@ private:
 class ASTNode;
 
 using ASTNodeData = std::
-    variant<BinaryExpr, UnaryExpr, Float, Integer, Root, Declaration, Identifier, Branch, Condition, BodyThen, BodyElse, Return, BlockStart, BlockEnd, WhileLoop, ImplicitTypeCast>;
+    variant<BinaryExpr, UnaryExpr, Float, Integer, Boolean, Root, Declaration, Identifier, Branch, Condition, BodyThen, BodyElse, BodyFunction, Return, BlockStart, BlockEnd, WhileLoop, ImplicitTypeCast>;
 using ASTNodePtr  = std::shared_ptr<ASTNode>;
 using ASTNodeWPtr = std::weak_ptr<ASTNode>;
 
@@ -220,13 +255,7 @@ public:
     }
     [[maybe_unused]] void replaceChild(ASTNodePtr& old, ASTNodePtr& nw) noexcept
     {
-        std::ranges::replace_if(
-            m_children,
-            [&old](const auto& n)
-            {
-                return n == old;
-            },
-            nw);
+        std::ranges::replace_if(m_children, [&old](const auto& n) { return n == old; }, nw);
     }
 
 
@@ -256,6 +285,9 @@ private:
             else if constexpr (std::is_same_v<T, ast::Integer>) {
                 return std::string("Integer: ") + std::to_string(arg.getValue());
             }
+            else if constexpr (std::is_same_v<T, ast::Boolean>) {
+                return std::string("Boolean: ") + std::to_string(arg.getValue());
+            }
             else if constexpr (std::is_same_v<T, ast::Root>) {
                 return "Root";
             }
@@ -276,6 +308,9 @@ private:
             }
             else if constexpr (std::is_same_v<T, ast::BodyElse>) {
                 return "BodyElse";
+            }
+            else if constexpr (std::is_same_v<T, ast::BodyFunction>) {
+                return "BodyFunction";
             }
             else if constexpr (std::is_same_v<T, ast::Return>) {
                 return "Return";
