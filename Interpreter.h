@@ -21,8 +21,11 @@ public:
 
 private:
     void interpretSymbols();
+    void interpretText(const ast::ASTNodePtr& ast);
+    void interpretNode(const ast::ASTNodePtr& node);
 
-    std::string typeToASM(const ts::Type& type);
+    std::string definedirectiveToASM(const ts::Type& type);
+    std::string reservedirectiveToASM(const ts::Type& type);
 
     [[noreturn]] void error(std::string_view msg);
 

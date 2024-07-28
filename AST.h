@@ -38,13 +38,17 @@ private:
 class UnaryExpr
 {
 public:
-    UnaryExpr(std::string_view literal) : m_literal(literal) {}
+    UnaryExpr(std::string_view literal, ts::Type type = ts::Type::unknown_t) : m_literal(literal), m_resultType(type) {}
     ~UnaryExpr() {}
 
     std::string getLiteral() const { return m_literal; }
+    ts::Type    getType() const { return m_resultType; }
+
+    void setType(ts::Type type) { m_resultType = type; }
 
 private:
     std::string m_literal;
+    ts::Type    m_resultType;
 };
 
 // variable declaration (then maybe function declaration)
@@ -258,10 +262,7 @@ public:
     }
     [[maybe_unused]] void replaceChild(ASTNodePtr& old, ASTNodePtr& nw) noexcept
     {
-        std::ranges::replace_if(
-            m_children,
-            [&old](const auto& n) { return n == old; },
-            nw);
+        std::ranges::replace_if(m_children, [&old](const auto& n) { return n == old; }, nw);
     }
 
 
