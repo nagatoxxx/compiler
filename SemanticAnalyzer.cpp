@@ -16,6 +16,7 @@ void SemanticAnalyzer::analyze(ast::ASTNodePtr& node)
 
     traversalPreorder(node);
 
+
 #ifdef DEBUG
     std::cout << "SemanticAnalyzer::buildSymbolTable() success\n";
     std::cout << "SemanticAnalyzer::typeCheck() called\n";
@@ -28,16 +29,16 @@ void SemanticAnalyzer::analyze(ast::ASTNodePtr& node)
 #endif
 }
 
-void SemanticAnalyzer::traversalPreorder(const ast::ASTNodePtr& node)
+void SemanticAnalyzer::traversalPreorder(ast::ASTNodePtr& node)
 {
     resolveId(node);
 
-    for (const ast::ASTNodePtr& c : node->getChildren()) {
+    for (ast::ASTNodePtr& c : node->getChildren()) {
         traversalPreorder(c);
     }
 }
 
-void SemanticAnalyzer::resolveId(const ast::ASTNodePtr& node)
+void SemanticAnalyzer::resolveId(ast::ASTNodePtr& node)
 {
     std::visit(
         [&node, this](auto&& arg) -> void
@@ -55,11 +56,35 @@ void SemanticAnalyzer::resolveId(const ast::ASTNodePtr& node)
                                         "scope");
                 }
 
-                Symbol s{type, ts::TypeSize[type], 0, 0};
+                Symbol s{type, ts::TypeSize[type], 0, 0, 0};
 
                 // if id is initialized
                 if (node->getChildren().size() == 2) {
                     SYMBOL_SET_FLAG(s, SYMBOL_FLAG_INITIALIZED);
+
+                    ast::ASTNodePtr expr = node->getChildren().back();
+
+                    if (compiletimeCalculated(expr)) {
+                        SYMBOL_SET_FLAG(s, SYMBOL_FLAG_COMPILETIME);
+                        ast::ASTNodePtr res = evaluate(expr);
+                        node->replaceChild(node->getChildren().back(), res);
+
+                        switch (type) {
+                            case ts::Type::float_t:
+                                s.value = valueToLong(ast::getValue<float>(res));
+                                break;
+                            case ts::Type::int_t:
+                                s.value = ast::getValue<int>(res);
+                                break;
+                            case ts::Type::char_t:
+                                [[fallthrough]];
+                            case ts::Type::bool_t:
+                                s.value = valueToLong(ast::getValue<std::uint8_t>(res));
+                                break;
+                            default:
+                                break;
+                        }
+                    }
                 }
 
                 m_symbolTable.insert(id->getName(), s);
@@ -76,6 +101,13 @@ void SemanticAnalyzer::resolveId(const ast::ASTNodePtr& node)
             }
             else if constexpr (std::is_same_v<T, ast::BlockEnd>) {
                 m_symbolTable.exitScope();
+            }
+            else if constexpr (std::is_same_v<T, ast::BinaryExpr>) {
+                if (compiletimeCalculated(node)) {
+                    ast::ASTNodePtr res    = evaluate(node);
+                    ast::ASTNodePtr parent = node->getParent().lock();
+                    parent->replaceChild(node, res);
+                }
             }
         },
         node->getData());
@@ -205,6 +237,93 @@ void SemanticAnalyzer::resolveTypes(ast::ASTNodePtr& node)
             else if constexpr (std::is_same_v<T, ast::BlockEnd>) {
                 m_symbolTable.exitScope();
             }
+        },
+        node->getData());
+}
+
+ast::ASTNodePtr SemanticAnalyzer::evaluate(const ast::ASTNodePtr& node)
+{
+    return std::visit(
+        [&node, this](auto&& x) -> ast::ASTNodePtr
+        {
+            using T = std::decay_t<decltype(x)>;
+
+            if constexpr (std::is_same_v<T, ast::Integer> || std::is_same_v<T, ast::Float> ||
+                          std::is_same_v<T, ast::Boolean> || std::is_same_v<T, ast::Identifier>) {
+                return node;
+            }
+            if constexpr (std::is_same_v<T, ast::BinaryExpr>) {
+                std::string op = x.getLiteral();
+
+                std::cout << "Evaluating binary expression: " << op << std::endl;
+
+                ast::ASTNodePtr left  = evaluate(node->getChildren().front());
+                ast::ASTNodePtr right = evaluate(node->getChildren().back());
+
+                ts::Type resultType = ts::Type::unknown_t;
+
+                if (x.getType() == ts::Type::unknown_t) {
+                    ts::Type lt = getType(left);
+                    ts::Type rt = getType(right);
+                    resultType  = (lt > rt) ? lt : rt;
+                }
+                else {
+                    resultType = x.getType();
+                }
+
+                std::cout << "Result type: " << ts::TypeNames[resultType] << std::endl;
+
+                ast::ASTNodePtr res = std::make_shared<ast::ASTNode>(ast::BinaryExpr(op, resultType));
+                res->addChild(left);
+                res->addChild(right);
+
+                switch (resultType) {
+                    case ts::Type::int_t:
+                    {
+                        return std::make_shared<ast::ASTNode>(ast::Integer(calculate<int>(res)));
+                    }
+                    case ts::Type::float_t:
+                    {
+                        return std::make_shared<ast::ASTNode>(ast::Float(calculate<float>(res)));
+                    }
+                    case ts::Type::bool_t:
+                    {
+                        // FIXME bool expressions calculating in float type
+                        // it works, but it's a bit ugly
+                        return std::make_shared<ast::ASTNode>(ast::Boolean(calculate<float>(res)));
+                    }
+                    case ts::Type::char_t:
+                    {
+                        return std::make_shared<ast::ASTNode>(ast::Integer(calculate<char>(res)));
+                    }
+                    default:
+                        throw SemanticError("unknown type in binary expression");
+                }
+            }
+
+            // non-reachable code
+            return std::make_shared<ast::ASTNode>(ast::Integer(0));
+        },
+        node->getData());
+}
+
+bool SemanticAnalyzer::compiletimeCalculated(const ast::ASTNodePtr& node)
+{
+    return std::visit(
+        [&node, this](auto&& x) -> bool
+        {
+            using T = std::decay_t<decltype(x)>;
+
+            if constexpr (std::is_same_v<T, ast::Integer> || std::is_same_v<T, ast::Float> ||
+                          std::is_same_v<T, ast::Boolean>) {
+                return true;
+            }
+            if constexpr (std::is_same_v<T, ast::BinaryExpr>) {
+                return compiletimeCalculated(node->getChildren().front()) &&
+                       compiletimeCalculated(node->getChildren().back());
+            }
+
+            return false;
         },
         node->getData());
 }

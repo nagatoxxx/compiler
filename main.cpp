@@ -65,10 +65,10 @@ int main(int argc, char* argv[])
         sa.analyze(tree);
 
 #ifdef DEBUG
-        std::cout << "AST:\n";
+        std::cout << "\nAST:\n";
         PrintAST(tree);
+        std::cout << "\nInterpreter:\n\n";
 #endif
-
         Interpreter interpreter(std::move(sa.getSymbolTable()));
         interpreter.interpret(tree);
 

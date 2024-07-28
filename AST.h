@@ -19,7 +19,9 @@ namespace ast
 class BinaryExpr
 {
 public:
-    BinaryExpr(std::string_view literal) : m_literal(literal) {}
+    BinaryExpr(std::string_view literal, ts::Type type = ts::Type::unknown_t) : m_literal(literal), m_resultType(type)
+    {
+    }
     ~BinaryExpr() {}
 
     std::string getLiteral() const { return m_literal; }
@@ -28,8 +30,8 @@ public:
     void setType(ts::Type type) { m_resultType = type; }
 
 private:
-    std::string m_literal; // string with operator
-    ts::Type    m_resultType = ts::Type::unknown_t;
+    std::string m_literal;    // string with operator
+    ts::Type    m_resultType; // unknown_t if auto detection needed, else type of result
 };
 
 // unused
@@ -232,6 +234,7 @@ using ASTNodeData = std::
 using ASTNodePtr  = std::shared_ptr<ASTNode>;
 using ASTNodeWPtr = std::weak_ptr<ASTNode>;
 
+
 class ASTNode : public std::enable_shared_from_this<ASTNode>
 {
 public:
@@ -255,7 +258,10 @@ public:
     }
     [[maybe_unused]] void replaceChild(ASTNodePtr& old, ASTNodePtr& nw) noexcept
     {
-        std::ranges::replace_if(m_children, [&old](const auto& n) { return n == old; }, nw);
+        std::ranges::replace_if(
+            m_children,
+            [&old](const auto& n) { return n == old; },
+            nw);
     }
 
 
@@ -265,6 +271,22 @@ private:
     std::list<ASTNodePtr> m_children;
     Location              m_loc;
 };
+
+template <typename T>
+inline T getValue(const ast::ASTNodePtr& node)
+{
+    if (std::holds_alternative<ast::Integer>(node->getData())) {
+        return (std::get<ast::Integer>(node->getData()).getValue());
+    }
+    if (std::holds_alternative<ast::Float>(node->getData())) {
+        return std::get<ast::Float>(node->getData()).getValue();
+    }
+    if (std::holds_alternative<ast::Boolean>(node->getData())) {
+        return std::get<ast::Boolean>(node->getData()).getValue();
+    }
+    throw SemanticError("SemanticAnalyzer::getValue() unknown type");
+}
+
 
 #ifdef DEBUG
 [[maybe_unused]] inline std::string ASTTypeToString(const ast::ASTNodePtr& node)

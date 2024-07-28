@@ -32,6 +32,8 @@ enum TokenKind
     LE,      // "<="
     EQUAL,   // "=="
     NE,      // "!="
+    AND,     // "&&"
+    OR,      // "||"
 
     // types
     KW_INT,
@@ -78,6 +80,8 @@ static const char* const TokNames[] =
      "LE",
      "EQUAL",
      "NE",
+     "AND",
+     "OR",
      "KW_INT",
      "KW_FLOAT",
      "KW_BOOL",

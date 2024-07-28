@@ -221,7 +221,7 @@ ast::ASTNodePtr Parser::relation_tail(const ast::ASTNodePtr& left)
             ast::ASTNodePtr additive = additive_expr();
             ast::ASTNodePtr rt       = relation_tail(additive);
 
-            ast::ASTNodePtr op = std::make_shared<ast::ASTNode>(ast::BinaryExpr(">"));
+            ast::ASTNodePtr op = std::make_shared<ast::ASTNode>(ast::BinaryExpr(">", ts::Type::bool_t));
             op->addChild(left);
             op->addChild(rt ? rt : additive);
             op->setLocation(m_ct->getLoc());
@@ -234,7 +234,7 @@ ast::ASTNodePtr Parser::relation_tail(const ast::ASTNodePtr& left)
             ast::ASTNodePtr additive = additive_expr();
             ast::ASTNodePtr rt       = relation_tail(additive);
 
-            ast::ASTNodePtr op = std::make_shared<ast::ASTNode>(ast::BinaryExpr("<"));
+            ast::ASTNodePtr op = std::make_shared<ast::ASTNode>(ast::BinaryExpr("<", ts::Type::bool_t));
             op->addChild(left);
             op->addChild(rt ? rt : additive);
             op->setLocation(m_ct->getLoc());
@@ -247,7 +247,7 @@ ast::ASTNodePtr Parser::relation_tail(const ast::ASTNodePtr& left)
             ast::ASTNodePtr additive = additive_expr();
             ast::ASTNodePtr rt       = relation_tail(additive);
 
-            ast::ASTNodePtr op = std::make_shared<ast::ASTNode>(ast::BinaryExpr("=="));
+            ast::ASTNodePtr op = std::make_shared<ast::ASTNode>(ast::BinaryExpr("==", ts::Type::bool_t));
             op->addChild(left);
             op->addChild(rt ? rt : additive);
             op->setLocation(m_ct->getLoc());
@@ -260,7 +260,7 @@ ast::ASTNodePtr Parser::relation_tail(const ast::ASTNodePtr& left)
             ast::ASTNodePtr additive = additive_expr();
             ast::ASTNodePtr rt       = relation_tail(additive);
 
-            ast::ASTNodePtr op = std::make_shared<ast::ASTNode>(ast::BinaryExpr("!="));
+            ast::ASTNodePtr op = std::make_shared<ast::ASTNode>(ast::BinaryExpr("!=", ts::Type::bool_t));
             op->addChild(left);
             op->addChild(rt ? rt : additive);
             op->setLocation(m_ct->getLoc());
@@ -273,7 +273,7 @@ ast::ASTNodePtr Parser::relation_tail(const ast::ASTNodePtr& left)
             ast::ASTNodePtr additive = additive_expr();
             ast::ASTNodePtr rt       = relation_tail(additive);
 
-            ast::ASTNodePtr op = std::make_shared<ast::ASTNode>(ast::BinaryExpr(">="));
+            ast::ASTNodePtr op = std::make_shared<ast::ASTNode>(ast::BinaryExpr(">=", ts::Type::bool_t));
             op->addChild(left);
             op->addChild(rt ? rt : additive);
             op->setLocation(m_ct->getLoc());
@@ -286,7 +286,7 @@ ast::ASTNodePtr Parser::relation_tail(const ast::ASTNodePtr& left)
             ast::ASTNodePtr additive = additive_expr();
             ast::ASTNodePtr rt       = relation_tail(additive);
 
-            ast::ASTNodePtr op = std::make_shared<ast::ASTNode>(ast::BinaryExpr("<="));
+            ast::ASTNodePtr op = std::make_shared<ast::ASTNode>(ast::BinaryExpr("<=", ts::Type::bool_t));
             op->addChild(left);
             op->addChild(rt ? rt : additive);
             op->setLocation(m_ct->getLoc());

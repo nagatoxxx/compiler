@@ -26,6 +26,8 @@ const std::unordered_map<std::string_view, TokenKind> Lexer::m_punctuators = {
     {"<=", TokenKind::LE     },
     {"==", TokenKind::EQUAL  },
     {"!=", TokenKind::NE     },
+    {"&&", TokenKind::AND    },
+    {"||", TokenKind::OR     },
 };
 
 const std::unordered_map<std::string_view, TokenKind> Lexer::m_keywords = {

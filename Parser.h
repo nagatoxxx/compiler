@@ -45,6 +45,8 @@ public:
     ast::ASTNodePtr assignment_stmt();
 
     // arithmetic expressions
+    // TODO logical expressions (and, or)
+    // TODO bitwise expressions
     ast::ASTNodePtr expr();
     ast::ASTNodePtr relation_expr();
     ast::ASTNodePtr relation_tail(const ast::ASTNodePtr& left);
@@ -59,7 +61,8 @@ public:
 
     // parsing body of a statement
     template <typename T>
-        requires(std::is_same_v<T, ast::BodyThen> || std::is_same_v<T, ast::BodyElse>)
+        requires(std::is_same_v<T, ast::BodyThen> || std::is_same_v<T, ast::BodyElse> ||
+                 std::is_same_v<T, ast::BodyFunction>)
     ast::ASTNodePtr body()
     {
         ast::ASTNodePtr body = std::make_shared<ast::ASTNode>(T());

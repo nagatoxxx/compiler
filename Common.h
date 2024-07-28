@@ -6,7 +6,7 @@
 #include <string_view>
 #include <unordered_map>
 
-#define TOK_TO_TYPE(x) static_cast<ts::Type>((x) - TokenKind::KW_INT)
+#define TOK_TO_TYPE(x) static_cast<ts::Type>((x)-TokenKind::KW_INT)
 
 namespace ts // type system namespace
 {
@@ -31,19 +31,29 @@ constexpr int UNSAFE_CAST = 2;
 constexpr int isImplicitlyCastable(Type t1, Type t2)
 {
     constexpr int castTable[unknown_t][unknown_t] = {
-        // int_t
+  // int_t
         {NONCASTABLE, SAFE_CAST,   SAFE_CAST,   UNSAFE_CAST},
-        // float_t
+ // float_t
         {UNSAFE_CAST, NONCASTABLE, SAFE_CAST,   NONCASTABLE},
-        // bool_t
+ // bool_t
         {SAFE_CAST,   SAFE_CAST,   NONCASTABLE, NONCASTABLE},
-        // char_t
+ // char_t
         {SAFE_CAST,   SAFE_CAST,   SAFE_CAST,   NONCASTABLE}
     };
 
     return castTable[t1][t2];
 }
 } // namespace ts
+
+template <typename T>
+std::uint32_t valueToLong(T&& t)
+{
+    if constexpr (sizeof(T) != sizeof(std::uint32_t)) {
+        return t;
+    }
+    else
+        return std::bit_cast<std::uint32_t, T>(t);
+}
 
 // location in source code
 struct Location
@@ -93,4 +103,14 @@ public:
 private:
     Location    m_location;
     std::string m_msg;
+};
+
+class InterpretError
+{
+public:
+    InterpretError(std::string_view what) : m_what(what) {}
+    const char* what() const { return m_what.c_str(); }
+
+private:
+    std::string m_what;
 };
