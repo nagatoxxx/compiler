@@ -1,0 +1,49 @@
+cabal-version:      3.0
+
+name:               Compiler
+
+version:            0.1.0.0
+license:            GPL-3.0-only
+license-file:       LICENSE
+build-type:         Simple
+
+extra-doc-files:    CHANGELOG.md
+
+common warnings
+    ghc-options: -Wall
+
+library
+    import:         warnings
+    hs-source-dirs: src
+    exposed-modules:
+        Lexer.Monad
+        Lexer.Token
+        Lexer.Rules
+        Parser.Monad
+        Parser.Ast
+        Parser.Rules
+    build-depends:
+        base
+      , mtl
+    default-language: GHC2021
+
+executable Compiler
+    import:           warnings
+    main-is:          Main.hs
+    build-depends:
+        base
+      , Compiler
+    hs-source-dirs:   app
+    default-language: GHC2021
+
+test-suite tests
+    type:             exitcode-stdio-1.0
+    main-is:          Spec.hs
+    other-modules:
+        LexerSpec
+    hs-source-dirs:   test
+    build-depends:
+        base
+      , Compiler
+      , hspec
+    default-language: GHC2021
