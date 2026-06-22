@@ -17,7 +17,7 @@ data ParserError = ParserError String
     deriving (Show, Eq)
 
 instance Monoid ParserError where
-    mempty = ParserError ""
+    mempty = ParserError "" 
 
 instance Semigroup ParserError where
     ParserError a <> ParserError _ = ParserError a
@@ -33,11 +33,11 @@ instance Alternative Parser where
         catchError p $ \_ ->
             put st >> q
 
+-- errors
 errUnexpectedToken :: ParserError
 errUnexpectedToken = ParserError "unexpected token"
 
-errEndOfInput :: ParserError
-errEndOfInput = ParserError "unexpected end of input"
+-- parserError
 
 peek :: Parser (Maybe Token)
 peek = do
@@ -61,7 +61,7 @@ satisfy p = do
             True  -> next >> return t
             False -> throwError errUnexpectedToken
 
-        Nothing -> throwError errEndOfInput
+        Nothing -> throwError errUnexpectedToken
 
 token :: Token -> Parser Token
 token t = satisfy (== t)
@@ -70,7 +70,7 @@ match :: (Token -> Maybe a) -> Parser a
 match f = do
     mt <- peek
     case mt of
-        Nothing -> throwError errEndOfInput
+        Nothing -> throwError errUnexpectedToken
         Just t  -> case f t of
             Nothing -> throwError errUnexpectedToken
             Just a  -> next >> return a

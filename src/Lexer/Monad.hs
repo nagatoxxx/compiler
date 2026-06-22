@@ -10,31 +10,45 @@ import Data.Char as C
 data LexerPosition = LexerPosition 
     { line :: Int
     , col  :: Int
-    } deriving Show
+    } deriving (Eq)
+
+instance Show LexerPosition where
+  show p = "line: " ++ show (line p) ++ ", col: " ++ show (col p)
 
 data LexerState = LexerState
     { source :: String
     , pos    :: LexerPosition
-    } deriving Show
+    } deriving (Show)
 
-data LexerError = LexerError String
-    deriving (Show, Eq)
+data LexerError = LexerError { message :: String
+                             , tpos    :: LexerPosition
+                             }
+                  deriving (Eq)
+
+instance Show LexerError where
+  show e = message e ++ " at " ++ show (tpos e)
 
 instance Monoid LexerError where
-    mempty = LexerError ""
+    mempty = LexerError "" (LexerPosition 1 1)
 
 instance Semigroup LexerError where
-    LexerError a <> LexerError _ = LexerError a
+    LexerError a p <> LexerError _ _ = LexerError a p
 
 type Lexer a = StateT LexerState (Except LexerError) a
 
 -- errors
-errEndOfInput :: LexerError
+errEndOfInput :: LexerPosition -> LexerError 
 errEndOfInput = LexerError "unexpected end of input"
 
-errUnexpectedChar :: LexerError
+errUnexpectedChar :: LexerPosition -> LexerError
 errUnexpectedChar = LexerError "unexpected character"
 
+lexError :: (LexerPosition -> LexerError) -> Lexer a
+lexError e = do
+  st <- get
+  throwError (e (pos st)) 
+
+-- pos
 updatePos :: Char -> LexerState -> LexerState
 updatePos c st = st
     { source = tail (source st)
@@ -61,17 +75,17 @@ next = do
     mc <- peek
     case mc of
         Just c  -> modify (updatePos c)
-        Nothing -> throwError errEndOfInput
+        Nothing -> lexError errEndOfInput
 
 -- потребить символ, удовлетворяющий p, и перейти к следующему
 satisfy :: (Char -> Bool) -> Lexer Char
 satisfy p = do
     mc <- peek
     case mc of
-        Nothing -> throwError errEndOfInput
+        Nothing -> lexError errEndOfInput
         Just c  -> if p c
             then next >> return c
-            else throwError errUnexpectedChar
+            else lexError errUnexpectedChar
 
 char :: Char -> Lexer Char
 char c = satisfy (== c)

@@ -46,10 +46,7 @@ pLam :: Parser Expr
 pLam = ELam <$> (token TBackslash *> pIdent) <*> (token TArrow *> pExpr)
 
 parse :: [Token] -> Either ParserError Expr
-parse ts = 
-    runExcept $ do
-        (e, st) <- runStateT (runParser pExpr) initialState
-        case tokens st of
-            [] -> return e
-            _  -> throwError errUnexpectedToken
+parse ts = runExcept
+        $ fst
+     <$> runStateT (runParser (pExpr <* token TEof)) initialState
     where initialState = ParserState { tokens = ts, pos = 1 }

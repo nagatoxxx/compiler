@@ -58,14 +58,8 @@ lexChar = TChar <$> (char '\'' *> body <* char '\'')
 lexPunct :: Lexer Token
 lexPunct =
     (char '(' *> return TLParen)   <|>
-    (char ')' *> return TRParen)  --  <|>
-    -- (char '[' *> return TLBracket) <|>
-    -- (char ']' *> return TRBracket) <|>
-    -- (char '{' *> return LBrace)   <|>
-    -- (char '}' *> return RBrace)   <|>
-    -- (char ',' *> return TComma)   <|>
-    -- (char ';' *> return TSemicolon)
-
+    (char ')' *> return TRParen)
+    
 opChars :: String
 opChars = "+-*/->\\"
 
@@ -85,7 +79,6 @@ lexToken = lexIdent
        <|> lexChar
        <|> lexOp
        <|> lexPunct
-       <|> throwError errUnexpectedChar
 
 lexTokens :: Lexer [Token]
 lexTokens = do
@@ -100,8 +93,8 @@ lexTokens = do
 
 tokenize :: String -> Either LexerError [Token]
 tokenize s = runExcept
-           $ fst
-         <$> runStateT lexTokens initialState
+           $ (++ [TEof]) <$>
+           fst <$> runStateT lexTokens initialState
          where initialState = LexerState { source = s
                                          , pos    = LexerPosition { line = 1
                                                                   , col = 1
