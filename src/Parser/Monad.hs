@@ -15,17 +15,24 @@ data ParserState = ParserState
 data ParserError = ParserError
     { parserErrPos      :: SourcePosition
     , parserErrGot      :: TokenKind
+    , parserErrExpected :: String
     } deriving (Eq)
 
 instance Show ParserError where
-  show e = "unexpected token: got " ++ show (parserErrGot e)
-          ++ " near " ++ show (parserErrPos e)
+  show e
+    | null (parserErrExpected e) =
+        "unexpected token: got " ++ show (parserErrGot e)
+        ++ " near " ++ show (parserErrPos e)
+    | otherwise =
+        "unexpected token: expected " ++ parserErrExpected e
+        ++ ", got " ++ show (parserErrGot e)
+        ++ " near " ++ show (parserErrPos e)
 
 instance Semigroup ParserError where
     a <> _ = a
 
 instance Monoid ParserError where
-    mempty = ParserError (SourcePosition 0 0) TEof
+    mempty = ParserError (SourcePosition 0 0) TEof ""
 
 newtype Parser a = Parser
     { runParser :: StateT ParserState (Except ParserError) a }
@@ -37,10 +44,13 @@ instance Alternative Parser where
         st <- get
         catchError p $ \_ -> put st >> q
 
+(<?>) :: Parser a -> String -> Parser a
+p <?> expected = catchError p (\e -> throwError e { parserErrExpected = expected })
+
 throwParserError :: Parser a
 throwParserError = do
     t <- peek
-    throwError (ParserError (tokenPos t) (tokenKind t))
+    throwError (ParserError (tokenPos t) (tokenKind t) "")
 
 peek :: Parser Token
 peek = do
@@ -61,7 +71,7 @@ satisfy p = do
     t <- peek
     if p (tokenKind t)
         then next >> return t
-        else throwError (ParserError (tokenPos t) (tokenKind t))
+        else throwError (ParserError (tokenPos t) (tokenKind t) "")
 
 token :: TokenKind -> Parser Token
 token tk = satisfy (== tk)
@@ -70,5 +80,5 @@ match :: (TokenKind -> Maybe a) -> Parser a
 match f = do
     t <- peek
     case f (tokenKind t) of
-        Nothing -> throwError (ParserError (tokenPos t) (tokenKind t))
+        Nothing -> throwError (ParserError (tokenPos t) (tokenKind t) "")
         Just a  -> next >> return a

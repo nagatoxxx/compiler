@@ -22,19 +22,16 @@ pChar :: Parser Literal
 pChar = LChar <$> match T.asChar
 
 pLiteral :: Parser Literal
-pLiteral = pInt 
-       <|> pFloat 
-       <|> pChar 
-       <|> pString 
+pLiteral = (pInt <|> pFloat <|> pChar <|> pString) <?> "literal"
 
 -- Ident as String
 pIdent :: Parser String
-pIdent = match T.asIdent
+pIdent = match T.asIdent <?> "identifier"
 
 pAtom :: Parser Atom
-pAtom = (ALit <$> pLiteral)
+pAtom = ((ALit <$> pLiteral)
     <|> (AIdent <$> pIdent)
-    <|> (APExpr <$> (token TLParen *> pExpr <* token TRParen))
+    <|> (APExpr <$> (token TLParen *> pExpr <* token TRParen))) <?> "atom"
 
 pApp :: Parser Expr
 pApp = do
@@ -43,13 +40,13 @@ pApp = do
   return $ foldl EApp (EAtom f) (map EAtom args)
 
 pExpr :: Parser Expr
-pExpr = pApp <|> pLam <|> EAtom <$> pAtom
+pExpr = (pApp <|> pLam <|> EAtom <$> pAtom) <?> "expr"
 
 pLam :: Parser Expr
-pLam = ELam <$> (token TBackslash *> pIdent) <*> (token TArrow *> pExpr)
+pLam = (ELam <$> (token TBackslash *> pIdent) <*> (token TArrow *> pExpr)) <?> "lambda"
 
 parse :: [Token] -> Either ParserError Expr
 parse ts = runExcept
         $ fst
-     <$> runStateT (runParser (pExpr <* token TEof)) initialState
+     <$> runStateT (runParser (pExpr <* (token TEof <?> "end of input"))) initialState
     where initialState = ParserState { tokens = ts }
