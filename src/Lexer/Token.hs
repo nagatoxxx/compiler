@@ -1,6 +1,14 @@
 module Lexer.Token where
 
-data Token
+data SourcePosition = SourcePosition
+    { line :: Int
+    , col  :: Int
+    } deriving (Eq)
+
+instance Show SourcePosition where
+    show p = "line: " ++ show (line p) ++ ", col: " ++ show (col p)
+
+data TokenKind
     = TInt    Int
     | TFloat  Double
     | TString String
@@ -14,22 +22,30 @@ data Token
     | TEof
     deriving (Show, Eq)
 
-asIdent :: Token -> Maybe String
+data Token = Token
+    { tokenKind :: TokenKind
+    , tokenPos  :: SourcePosition
+    } deriving (Eq)
+
+instance Show Token where
+    show = show . tokenKind
+
+asIdent :: TokenKind -> Maybe String
 asIdent (TIdent s) = Just s
 asIdent _          = Nothing
 
-asInt :: Token -> Maybe Int
+asInt :: TokenKind -> Maybe Int
 asInt (TInt n) = Just n
 asInt _        = Nothing
 
-asFloat :: Token -> Maybe Double
+asFloat :: TokenKind -> Maybe Double
 asFloat (TFloat n) = Just n
 asFloat _          = Nothing
 
-asString :: Token -> Maybe String
+asString :: TokenKind -> Maybe String
 asString (TString s) = Just s
 asString _           = Nothing
 
-asChar :: Token -> Maybe Char
+asChar :: TokenKind -> Maybe Char
 asChar (TChar c) = Just c
 asChar _         = Nothing

@@ -52,4 +52,4 @@ parse :: [Token] -> Either ParserError Expr
 parse ts = runExcept
         $ fst
      <$> runStateT (runParser (pExpr <* token TEof)) initialState
-    where initialState = ParserState { tokens = ts, pos = 1 }
+    where initialState = ParserState { tokens = ts }

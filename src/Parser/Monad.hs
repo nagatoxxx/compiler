@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-} -- для deriving Functor, State...
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Parser.Monad where
 
@@ -10,67 +10,65 @@ import Control.Applicative
 
 data ParserState = ParserState
     { tokens :: [Token]
-    , pos    :: Int
     }
 
-data ParserError = ParserError String
-    deriving (Show, Eq)
+data ParserError = ParserError
+    { parserErrPos      :: SourcePosition
+    , parserErrGot      :: TokenKind
+    } deriving (Eq)
 
-instance Monoid ParserError where
-    mempty = ParserError "" 
+instance Show ParserError where
+  show e = "unexpected token: got " ++ show (parserErrGot e)
+          ++ " near " ++ show (parserErrPos e)
 
 instance Semigroup ParserError where
-    ParserError a <> ParserError _ = ParserError a
+    a <> _ = a
+
+instance Monoid ParserError where
+    mempty = ParserError (SourcePosition 0 0) TEof
 
 newtype Parser a = Parser
-    { runParser :: StateT ParserState (Except ParserError) a } 
+    { runParser :: StateT ParserState (Except ParserError) a }
     deriving (Functor, Applicative, Monad, MonadState ParserState, MonadError ParserError)
 
 instance Alternative Parser where
-    empty = throwError errUnexpectedToken
+    empty = throwParserError
     p <|> q = do
         st <- get
-        catchError p $ \_ ->
-            put st >> q
+        catchError p $ \_ -> put st >> q
 
--- errors
-errUnexpectedToken :: ParserError
-errUnexpectedToken = ParserError "unexpected token"
+throwParserError :: Parser a
+throwParserError = do
+    t <- peek
+    throwError (ParserError (tokenPos t) (tokenKind t))
 
--- parserError
-
-peek :: Parser (Maybe Token)
+peek :: Parser Token
 peek = do
     st <- get
-    return (case (tokens st) of
-        (t:_) -> Just t
-        []    -> Nothing)
+    case tokens st of
+        (t:_) -> return t
+        []    -> return (Token TEof (SourcePosition 0 0))
 
 next :: Parser ()
 next = do
     st <- get
-    case (tokens st) of
-        (_:ts) -> put st { tokens = ts, pos = pos st + 1 }
-        []     -> throwError errUnexpectedToken
+    case tokens st of
+        (_:ts) -> put st { tokens = ts }
+        []     -> throwParserError
 
-satisfy :: (Token -> Bool) -> Parser Token
+satisfy :: (TokenKind -> Bool) -> Parser Token
 satisfy p = do
-    mt <- peek
-    case mt of
-        Just t  -> case p t of
-            True  -> next >> return t
-            False -> throwError errUnexpectedToken
+    t <- peek
+    if p (tokenKind t)
+        then next >> return t
+        else throwError (ParserError (tokenPos t) (tokenKind t))
 
-        Nothing -> throwError errUnexpectedToken
+token :: TokenKind -> Parser Token
+token tk = satisfy (== tk)
 
-token :: Token -> Parser Token
-token t = satisfy (== t)
-
-match :: (Token -> Maybe a) -> Parser a
+match :: (TokenKind -> Maybe a) -> Parser a
 match f = do
-    mt <- peek
-    case mt of
-        Nothing -> throwError errUnexpectedToken
-        Just t  -> case f t of
-            Nothing -> throwError errUnexpectedToken
-            Just a  -> next >> return a
+    t <- peek
+    case f (tokenKind t) of
+        Nothing -> throwError (ParserError (tokenPos t) (tokenKind t))
+        Just a  -> next >> return a

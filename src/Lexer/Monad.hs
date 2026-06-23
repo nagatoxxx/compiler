@@ -2,26 +2,20 @@
 
 module Lexer.Monad where
 
+import Lexer.Token (SourcePosition(..))
+
 import Control.Monad.State
 import Control.Monad.Except
 import Control.Applicative
 import Data.Char as C
 
-data LexerPosition = LexerPosition 
-    { line :: Int
-    , col  :: Int
-    } deriving (Eq)
-
-instance Show LexerPosition where
-  show p = "line: " ++ show (line p) ++ ", col: " ++ show (col p)
-
 data LexerState = LexerState
     { source :: String
-    , pos    :: LexerPosition
+    , pos    :: SourcePosition
     } deriving (Show)
 
 data LexerError = LexerError { lexErrMsg :: String
-                             , lexErrPos :: LexerPosition
+                             , lexErrPos :: SourcePosition
                              }
                   deriving (Eq)
 
@@ -29,7 +23,7 @@ instance Show LexerError where
   show e = lexErrMsg e ++ " at " ++ show (lexErrPos e)
 
 instance Monoid LexerError where
-    mempty = LexerError "" (LexerPosition 1 1)
+    mempty = LexerError "" (SourcePosition 1 1)
 
 instance Semigroup LexerError where
     LexerError a p <> LexerError _ _ = LexerError a p
@@ -37,13 +31,13 @@ instance Semigroup LexerError where
 type Lexer a = StateT LexerState (Except LexerError) a
 
 -- errors
-errEndOfInput :: LexerPosition -> LexerError 
+errEndOfInput :: SourcePosition -> LexerError
 errEndOfInput = LexerError "unexpected end of input"
 
-errUnexpectedChar :: LexerPosition -> LexerError
+errUnexpectedChar :: SourcePosition -> LexerError
 errUnexpectedChar = LexerError "unexpected character"
 
-lexError :: (LexerPosition -> LexerError) -> Lexer a
+lexError :: (SourcePosition -> LexerError) -> Lexer a
 lexError e = do
   st <- get
   throwError (e (pos st)) 
@@ -56,7 +50,7 @@ updatePos c st = st
     }
     where isNewline = (c == '\n')
           oldPos    = pos st
-          newPos = LexerPosition 
+          newPos = SourcePosition
                 { line = (if isNewline then (+1) else id) . line $ oldPos
                 , col  = (if isNewline then 1 else col oldPos + 1)
                 }

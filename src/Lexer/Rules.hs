@@ -8,7 +8,7 @@ import Control.Monad.State
 import Control.Monad.Except
 import qualified Data.Char as C
 
-lexIdent :: Lexer Token
+lexIdent :: Lexer TokenKind
 lexIdent = TIdent <$> ident
 
 digit :: Lexer Char
@@ -23,14 +23,14 @@ ident = do
     cs <- many (alpha <|> digit)
     return (c : cs)
 
-lexInt :: Lexer Token
+lexInt :: Lexer TokenKind
 lexInt = do
     sign   <- optional (char '-')
     digits <- some digit
     let num = maybe "" (:[]) sign ++ digits
     return (TInt (read num))
 
-lexFloat :: Lexer Token
+lexFloat :: Lexer TokenKind
 lexFloat = do
     sign    <- optional (char '-')
     digits1 <- some digit
@@ -39,7 +39,7 @@ lexFloat = do
     let num = maybe "" (:[]) sign ++ digits1 ++ "." ++ digits2
     return (TFloat (read num))
 
-lexString :: Lexer Token
+lexString :: Lexer TokenKind
 lexString = TString <$> (char '"' *> many (noneOf "\"") <* char '"')
 
 escapeChar :: Char -> Char
@@ -50,20 +50,20 @@ escapeChar '\'' = '\''
 escapeChar '0'  = '\0'
 escapeChar c    = c
 
-lexChar :: Lexer Token
+lexChar :: Lexer TokenKind
 lexChar = TChar <$> (char '\'' *> body <* char '\'')
   where body = char '\\' *> (escapeChar <$> anyOf "nt\\'0")
            <|> noneOf "\\'"
 
-lexPunct :: Lexer Token
+lexPunct :: Lexer TokenKind
 lexPunct =
     (char '(' *> return TLParen)   <|>
     (char ')' *> return TRParen)
-    
+
 opChars :: String
 opChars = "+-*/->\\"
 
-lexOp :: Lexer Token
+lexOp :: Lexer TokenKind
 lexOp = do
     op <- some (anyOf opChars)
     case op of
@@ -71,21 +71,29 @@ lexOp = do
         "\\" -> return TBackslash
         _    -> return (TOp op)
 
+lexTokenKind :: Lexer TokenKind
+lexTokenKind = lexIdent
+           <|> lexFloat
+           <|> lexInt
+           <|> lexString
+           <|> lexChar
+           <|> lexOp
+           <|> lexPunct
+
 lexToken :: Lexer Token
-lexToken = lexIdent
-       <|> lexFloat
-       <|> lexInt
-       <|> lexString
-       <|> lexChar
-       <|> lexOp
-       <|> lexPunct
+lexToken = do
+    p  <- gets pos
+    tk <- lexTokenKind
+    return (Token tk p)
 
 lexTokens :: Lexer [Token]
 lexTokens = do
     skipSpaces
     mc <- peek
     case mc of
-        Nothing -> return []
+        Nothing -> do
+            p <- gets pos
+            return [Token TEof p]
         Just _  -> do
             t  <- lexToken
             ts <- lexTokens
@@ -93,10 +101,9 @@ lexTokens = do
 
 tokenize :: String -> Either LexerError [Token]
 tokenize s = runExcept
-           $ (++ [TEof]) <$>
-           fst <$> runStateT lexTokens initialState
+           $ fst <$> runStateT lexTokens initialState
          where initialState = LexerState { source = s
-                                         , pos    = LexerPosition { line = 1
-                                                                  , col = 1
-                                                                  }
+                                         , pos    = SourcePosition { line = 1
+                                                                   , col  = 1
+                                                                   }
                                          }
