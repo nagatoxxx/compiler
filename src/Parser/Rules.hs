@@ -37,7 +37,10 @@ pAtom = (ALit <$> pLiteral)
     <|> (APExpr <$> (token TLParen *> pExpr <* token TRParen))
 
 pApp :: Parser Expr
-pApp = EApp <$> pAtom <*> some pAtom
+pApp = do
+  f <- pAtom
+  args <- some pAtom
+  return $ foldl EApp (EAtom f) (map EAtom args)
 
 pExpr :: Parser Expr
 pExpr = pApp <|> pLam <|> EAtom <$> pAtom

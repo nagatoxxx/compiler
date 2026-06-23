@@ -1,7 +1,7 @@
 module Parser.Ast where
 
 data Expr
-    = EApp Atom [Atom]
+    = EApp Expr Expr
     | ELam String Expr
     | EAtom Atom
     deriving Show

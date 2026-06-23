@@ -1,11 +1,9 @@
 -- UPPERCASE, 'c' = terminal
 -- lowercase      = nonterminal
 
-program ::= expr
-
-atom ::= literal | ident | '(' expr ')'
-lam  ::= '\' ident '->' expr
-appl ::= atom atom+
-expr ::= appl | lam | atom
-
+program ::= expr EOF
+atom    ::= literal | ident | '(' expr ')'
+lam     ::= '\' ident '->' expr
+appl    ::= atom atom+
+expr    ::= appl | lam | atom
 literal ::= INT | FLOAT | STRING | CHAR
