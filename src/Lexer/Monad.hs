@@ -20,13 +20,13 @@ data LexerState = LexerState
     , pos    :: LexerPosition
     } deriving (Show)
 
-data LexerError = LexerError { message :: String
-                             , tpos    :: LexerPosition
+data LexerError = LexerError { lexErrMsg :: String
+                             , lexErrPos :: LexerPosition
                              }
                   deriving (Eq)
 
 instance Show LexerError where
-  show e = message e ++ " at " ++ show (tpos e)
+  show e = lexErrMsg e ++ " at " ++ show (lexErrPos e)
 
 instance Monoid LexerError where
     mempty = LexerError "" (LexerPosition 1 1)
