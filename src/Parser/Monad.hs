@@ -19,6 +19,7 @@ data ParserError = ParserError
     } deriving (Eq)
 
 instance Show ParserError where
+  show :: ParserError -> String
   show e
     | null (parserErrExpected e) =
         "unexpected token: got " ++ show (parserErrGot e)
@@ -29,9 +30,10 @@ instance Show ParserError where
         ++ " near " ++ show (parserErrPos e)
 
 instance Semigroup ParserError where
+    (<>) :: ParserError -> ParserError -> ParserError
     a <> _ = a
-
 instance Monoid ParserError where
+    mempty :: ParserError
     mempty = ParserError (SourcePosition 0 0) TEof ""
 
 newtype Parser a = Parser
@@ -39,7 +41,9 @@ newtype Parser a = Parser
     deriving (Functor, Applicative, Monad, MonadState ParserState, MonadError ParserError)
 
 instance Alternative Parser where
+    empty :: Parser a
     empty = throwParserError
+    (<|>) :: Parser a -> Parser a -> Parser a
     p <|> q = do
         st <- get
         catchError p $ \_ -> put st >> q

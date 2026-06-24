@@ -3,13 +3,8 @@ module Parser.Ast where
 data Expr
     = EApp Expr Expr
     | ELam String Expr
-    | EAtom Atom
-    deriving Show
-
-data Atom
-    = ALit Literal
-    | AIdent String
-    | APExpr Expr -- '(' expr ')'
+    | EIdent String
+    | ELit Literal
     deriving Show
 
 data Literal
