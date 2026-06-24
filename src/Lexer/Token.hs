@@ -15,16 +15,17 @@ data TokenKind
     | TChar   Char
     | TIdent  String
     | TOp     String
-    | TLParen  | TRParen
-    | TLBracket | TRBracket
+    | TLParen
+    | TRParen
+    | TLBracket
+    | TRBracket
     | TBackslash
     | TArrow
     | TEof
     deriving (Show, Eq)
 
 data Token = Token
-    { tokenKind :: TokenKind
-    , tokenPos  :: SourcePosition
+    { tokenKind :: TokenKind , tokenPos  :: SourcePosition
     } deriving (Eq)
 
 instance Show Token where
@@ -49,3 +50,7 @@ asString _           = Nothing
 asChar :: TokenKind -> Maybe Char
 asChar (TChar c) = Just c
 asChar _         = Nothing
+
+asOp :: TokenKind -> Maybe String
+asOp (TOp s) = Just s
+asOp _       = Nothing

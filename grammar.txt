@@ -1,9 +1,14 @@
--- UPPERCASE, 'c' = terminal
--- lowercase      = nonterminal
-
 program ::= expr EOF
-atom    ::= literal | ident | '(' expr ')'
-lam     ::= '\' ident '->' expr
-appl    ::= atom atom+
-expr    ::= appl | lam | atom
+
+expr    ::= '\' ident+ '->' expr
+          | atom+ (op expr)?
+
+atom    ::= literal
+          | ident
+          | '(' expr ')'
+          | op expr -- unary op application
+
+ident   ::= ('_' | ALPHA) (ALPHA | DIGIT)*
 literal ::= INT | FLOAT | STRING | CHAR
+opchar  ::= '+' | '-' | '*' | '/' | '-' | '>' | '\'
+op = opchar+

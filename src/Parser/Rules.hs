@@ -28,23 +28,19 @@ pLiteral = (pInt <|> pFloat <|> pChar <|> pString) <?> "literal"
 pIdent :: Parser String
 pIdent = match T.asIdent <?> "identifier"
 
+pUnaryAppAtom :: Parser Expr
+pUnaryAppAtom = EApp <$> (EIdent <$> match T.asOp <?> "unary operator application") <*> pExpr
+
 pAtom :: Parser Expr
 pAtom = ((ELit <$> pLiteral)
-     <|> (EIdent <$> pIdent)
-     <|> (token TLParen *> pExpr <* token TRParen)) <?> "atom"
-
-pApp :: Parser Expr
-pApp = do
-  f <- pAtom
-  args <- some pAtom
-  return $ (foldl EApp f args)
+    <|> pUnaryAppAtom
+    <|> (EIdent <$> pIdent)
+    <|> (token TLParen *> pExpr <* token TRParen)
+    ) <?> "atom"
 
 pExpr :: Parser Expr
-pExpr = ((ELit <$> pLiteral)
-     <|> (EIdent <$> pIdent)
-     <|> (pApp)
-     <|> (token TLParen *> pExpr <* token TRParen)
-     <|> pLam) <?> "expr"
+pExpr = pLam
+    <|> pAtom <?> "expr"
 
 pLam :: Parser Expr
 pLam = (ELam <$> (token TBackslash *> pIdent) <*> (token TArrow *> pExpr)) <?> "lambda"
