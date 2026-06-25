@@ -7,11 +7,15 @@ import Lexer.Token
 import Control.Monad.Except
 import Control.Monad.State
 import Control.Applicative
+import qualified Data.Map as M
 
 data ParserState = ParserState
-    { tokens :: [Token]
+    { tokens        :: [Token]
+    , infixOpTable  :: OpTable
+    , prefixOpTable :: OpTable
     }
 
+-- TODO: ParserErrorUnexpected, ParserError... (cannot found op in table)
 data ParserError = ParserError
     { parserErrPos      :: SourcePosition
     , parserErrGot      :: TokenKind
@@ -32,6 +36,7 @@ instance Show ParserError where
 instance Semigroup ParserError where
     (<>) :: ParserError -> ParserError -> ParserError
     a <> _ = a
+    
 instance Monoid ParserError where
     mempty :: ParserError
     mempty = ParserError (SourcePosition 0 0) TEof ""
@@ -48,6 +53,7 @@ instance Alternative Parser where
         st <- get
         catchError p $ \_ -> put st >> q
 
+-- TODO: push to grammar stack
 (<?>) :: Parser a -> String -> Parser a
 p <?> expected = catchError p (\e -> throwError e { parserErrExpected = expected })
 
@@ -63,11 +69,11 @@ peek = do
         (t:_) -> return t
         []    -> return (Token TEof (SourcePosition 0 0))
 
-next :: Parser ()
+next :: Parser Token
 next = do
     st <- get
     case tokens st of
-        (_:ts) -> put st { tokens = ts }
+        (t:ts) -> put st { tokens = ts } >> return t
         []     -> throwParserError
 
 satisfy :: (TokenKind -> Bool) -> Parser Token
@@ -86,3 +92,29 @@ match f = do
     case f (tokenKind t) of
         Nothing -> throwError (ParserError (tokenPos t) (tokenKind t) "")
         Just a  -> next >> return a
+
+data OpAssoc = OpLeft | OpRight
+
+data OpInfo = OpInfix { assoc :: OpAssoc, prec :: Int }
+            | OpPrefix { prec :: Int}
+            
+type OpTable = M.Map String OpInfo
+
+defaultInfixOpTable :: OpTable
+defaultInfixOpTable = M.fromList
+  [ ("+", OpInfix OpLeft 5)
+  , ("-", OpInfix OpLeft 5)
+  , ("*", OpInfix OpLeft 6)
+  , ("/", OpInfix OpLeft 6)
+  ]
+
+defaultPrefixOpTable :: OpTable
+defaultPrefixOpTable = M.fromList
+  [ ("-", OpPrefix 10)
+  , ("+", OpPrefix 10)
+  ]
+
+bp :: String -> OpTable -> Maybe Int
+bp s t = do
+    inf <- M.lookup s t
+    Just $ prec inf

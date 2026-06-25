@@ -22,10 +22,10 @@ library
         Parser.Monad
         Parser.Ast
         Parser.Rules
-        Parser.Pratt
     build-depends:
         base
       , mtl
+      , containers
     default-language: GHC2021
 
 executable Compiler

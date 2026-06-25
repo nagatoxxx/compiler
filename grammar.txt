@@ -6,7 +6,7 @@ expr    ::= '\' ident+ '->' expr
 atom    ::= literal
           | ident
           | '(' expr ')'
-          | op expr -- unary op application
+          | op atom -- unary op application
 
 ident   ::= ('_' | ALPHA) (ALPHA | DIGIT)*
 literal ::= INT | FLOAT | STRING | CHAR

@@ -1,6 +1,7 @@
 module Parser.Rules where
 
 import Control.Applicative
+import Control.Monad (guard)
 import Control.Monad.State
 import Control.Monad.Except
 
@@ -28,25 +29,53 @@ pLiteral = (pInt <|> pFloat <|> pChar <|> pString) <?> "literal"
 pIdent :: Parser String
 pIdent = match T.asIdent <?> "identifier"
 
-pUnaryAppAtom :: Parser Expr
-pUnaryAppAtom = EApp <$> (EIdent <$> match T.asOp <?> "unary operator application") <*> pExpr
-
 pAtom :: Parser Expr
 pAtom = ((ELit <$> pLiteral)
-    <|> pUnaryAppAtom
     <|> (EIdent <$> pIdent)
     <|> (token TLParen *> pExpr <* token TRParen)
     ) <?> "atom"
 
+nud :: Parser Expr
+nud = pAtom
+  <|> pLam
+  <|> (do
+          op <- match T.asOp
+          t  <- gets infixOpTable
+          maybe (throwError mempty) (\p -> EApp (EIdent op) <$> pPratt p) (bp op t)
+      )
+
+_pPratt :: Expr -> Int -> Parser Expr
+_pPratt l minBp = do
+  t <- gets infixOpTable
+  do
+    op  <- match T.asOp
+    rbp <- maybe (throwError mempty) return (bp op t)
+    guard (rbp > minBp)
+    right <- pPratt rbp
+    _pPratt (EApp (EApp (EIdent op) l) right) minBp
+  <|>
+  do
+    right <- pAtom
+    _pPratt (EApp l right) minBp
+  <|> return l
+
+pPratt :: Int -> Parser Expr
+pPratt minBp = do
+  l <- nud
+  _pPratt l minBp
+
 pExpr :: Parser Expr
-pExpr = pLam
-    <|> pAtom <?> "expr"
+pExpr = pPratt 0
+    <?> "expr"
 
 pLam :: Parser Expr
-pLam = (ELam <$> (token TBackslash *> pIdent) <*> (token TArrow *> pExpr)) <?> "lambda"
+pLam = (ELam <$> (token TBackslash *> some pIdent) <*> (token TArrow *> pExpr)) <?> "lambda"
 
 parse :: [Token] -> Either ParserError Expr
 parse ts = runExcept
-        $ fst
-     <$> runStateT (runParser (pExpr <* (token TEof <?> "end of input"))) initialState
-    where initialState = ParserState { tokens = ts }
+         $ fst
+       <$> runStateT (runParser (pExpr <* (token TEof <?> "end of input"))) initialState
+    where initialState = ParserState { tokens        = ts
+                                     , infixOpTable  = defaultInfixOpTable
+                                     , prefixOpTable = defaultPrefixOpTable
+                                     }

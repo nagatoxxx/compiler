@@ -2,7 +2,7 @@ module Parser.Ast where
 
 data Expr
     = EApp Expr Expr
-    | ELam String Expr
+    | ELam [String] Expr
     | EIdent String
     | ELit Literal
     deriving Show
