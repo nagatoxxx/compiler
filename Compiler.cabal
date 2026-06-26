@@ -42,6 +42,7 @@ test-suite tests
     main-is:          Spec.hs
     other-modules:
         LexerSpec
+        ParserSpec
     hs-source-dirs:   test
     build-depends:
         base

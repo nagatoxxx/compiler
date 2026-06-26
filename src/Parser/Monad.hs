@@ -95,17 +95,17 @@ match f = do
 
 data OpAssoc = OpLeft | OpRight
 
-data OpInfo = OpInfix { assoc :: OpAssoc, prec :: Int }
-            | OpPrefix { prec :: Int}
+data OpInfo = OpInfix  { rbp :: Int, lbp :: Int }
+            | OpPrefix { bp :: Int}
             
 type OpTable = M.Map String OpInfo
 
 defaultInfixOpTable :: OpTable
 defaultInfixOpTable = M.fromList
-  [ ("+", OpInfix OpLeft 5)
-  , ("-", OpInfix OpLeft 5)
-  , ("*", OpInfix OpLeft 6)
-  , ("/", OpInfix OpLeft 6)
+  [ ("+", OpInfix 5 5)
+  , ("-", OpInfix 5 5)
+  , ("*", OpInfix 6 6)
+  , ("/", OpInfix 6 6)
   ]
 
 defaultPrefixOpTable :: OpTable
@@ -114,7 +114,5 @@ defaultPrefixOpTable = M.fromList
   , ("+", OpPrefix 10)
   ]
 
-bp :: String -> OpTable -> Maybe Int
-bp s t = do
-    inf <- M.lookup s t
-    Just $ prec inf
+opInfo :: String -> OpTable -> Maybe OpInfo
+opInfo s t = M.lookup s t

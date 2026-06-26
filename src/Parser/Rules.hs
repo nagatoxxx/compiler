@@ -41,7 +41,7 @@ nud = pAtom
   <|> (do
           op <- match T.asOp
           t  <- gets infixOpTable
-          maybe (throwError mempty) (\p -> EApp (EIdent op) <$> pPratt p) (bp op t)
+          maybe (throwError mempty) (\p -> EApp (EIdent op) <$> pPratt p) (lbp <$> (opInfo op t))
       )
 
 _pPratt :: Expr -> Int -> Parser Expr
@@ -49,10 +49,13 @@ _pPratt l minBp = do
   t <- gets infixOpTable
   do
     op  <- match T.asOp
-    rbp <- maybe (throwError mempty) return (bp op t)
-    guard (rbp > minBp)
-    right <- pPratt rbp
-    _pPratt (EApp (EApp (EIdent op) l) right) minBp
+    info <- maybe (throwError mempty) return (opInfo op t)
+    case info of
+      OpInfix lb rb -> do
+        guard (lb > minBp)
+        right <- pPratt rb
+        _pPratt (EApp (EApp (EIdent op) l) right) minBp
+      OpPrefix _ -> throwError mempty 
   <|>
   do
     right <- pAtom

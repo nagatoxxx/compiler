@@ -5,11 +5,11 @@ data Expr
     | ELam [String] Expr
     | EIdent String
     | ELit Literal
-    deriving Show
+    deriving (Show, Eq)
 
 data Literal
     = LInt Int
     | LFloat Double
     | LString String
     | LChar Char
-    deriving Show
+    deriving (Show, Eq)
