@@ -1,12 +1,7 @@
+{-# LANGUAGE CPP #-}
+
 module Lexer.Token where
-
-data SourcePosition = SourcePosition
-    { line :: Int
-    , col  :: Int
-    } deriving (Eq)
-
-instance Show SourcePosition where
-    show p = "line: " ++ show (line p) ++ ", col: " ++ show (col p)
+import Common.SourcePosition
 
 data TokenKind
     = TInt    Int
@@ -24,12 +19,21 @@ data TokenKind
     | TEof
     deriving (Show, Eq)
 
-data Token = Token
-    { tokenKind :: TokenKind , tokenPos  :: SourcePosition
-    } deriving (Eq)
+type Token = WithSourceLocation TokenKind
+
+kind :: Token -> TokenKind
+kind t = value t
+
+makeToken :: SourceLocation -> TokenKind -> Token
+makeToken = WithSourceLocation
 
 instance Show Token where
-    show = show . tokenKind
+    show :: Token -> String
+#ifdef DEBUG
+    show t = (show . kind $ t) ++ " (" ++ (show . loc $ t) ++ ")"
+#else
+    show t = (show . kind $ t)
+#endif
 
 asIdent :: TokenKind -> Maybe String
 asIdent (TIdent s) = Just s

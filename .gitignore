@@ -1,3 +1,4 @@
 input.txt
 dist-newstyle/
 .claude
+.dir-locals.el

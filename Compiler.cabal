@@ -12,10 +12,16 @@ extra-doc-files:    CHANGELOG.md
 common warnings
     ghc-options: -Wall
 
+flag debug
+     description: "Enable debug output"
+     default: False
+     manual: True
+
 library
     import:         warnings
     hs-source-dirs: src
     exposed-modules:
+        Common.SourcePosition
         Lexer.Monad
         Lexer.Token
         Lexer.Rules
@@ -27,6 +33,9 @@ library
       , mtl
       , containers
     default-language: GHC2021
+    if flag(debug)
+        cpp-options: -DDEBUG
+
 
 executable Compiler
     import:           warnings
@@ -36,6 +45,9 @@ executable Compiler
       , Compiler
     hs-source-dirs:   app
     default-language: GHC2021
+    if flag(debug)
+        cpp-options: -DDEBUG
+
 
 test-suite tests
     type:             exitcode-stdio-1.0

@@ -7,6 +7,7 @@ import Control.Applicative
 import Control.Monad.State
 import Control.Monad.Except
 import qualified Data.Char as C
+import Common.SourcePosition
 
 lexIdent :: Lexer TokenKind
 lexIdent = TIdent <$> ident
@@ -82,9 +83,10 @@ lexTokenKind = lexIdent
 
 lexToken :: Lexer Token
 lexToken = do
-    p  <- gets pos
-    tk <- lexTokenKind
-    return (Token tk p)
+    start <- gets pos
+    t     <- lexTokenKind
+    stop  <- gets pos
+    return (makeToken (SourceLocation start stop) t)
 
 lexTokens :: Lexer [Token]
 lexTokens = do
@@ -92,8 +94,7 @@ lexTokens = do
     mc <- peek
     case mc of
         Nothing -> do
-            p <- gets pos
-            return [Token TEof p]
+            return [makeToken (SourceLocation (SourcePosition 0 0) (SourcePosition 0 0)) TEof]
         Just _  -> do
             t  <- lexToken
             ts <- lexTokens

@@ -2,12 +2,12 @@
 
 module Lexer.Monad where
 
-import Lexer.Token (SourcePosition(..))
-
 import Control.Monad.State
 import Control.Monad.Except
 import Control.Applicative
 import Data.Char as C
+
+import Common.SourcePosition
 
 data LexerState = LexerState
     { source :: String
@@ -20,12 +20,15 @@ data LexerError = LexerError { lexErrMsg :: String
                   deriving (Eq)
 
 instance Show LexerError where
+  show :: LexerError -> String
   show e = lexErrMsg e ++ " at " ++ show (lexErrPos e)
 
 instance Monoid LexerError where
+    mempty :: LexerError
     mempty = LexerError "" (SourcePosition 1 1)
 
 instance Semigroup LexerError where
+    (<>) :: LexerError -> LexerError -> LexerError
     LexerError a p <> LexerError _ _ = LexerError a p
 
 type Lexer a = StateT LexerState (Except LexerError) a

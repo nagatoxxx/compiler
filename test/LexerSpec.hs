@@ -9,7 +9,7 @@ import Lexer.Monad (LexerError)
 
 -- Strip positions so we can compare TokenKind lists
 tokenizeKinds :: String -> Either LexerError [TokenKind]
-tokenizeKinds s = fmap (map tokenKind) (tokenize s)
+tokenizeKinds s = fmap (map kind) (tokenize s)
 
 spec :: Spec
 spec = do

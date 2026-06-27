@@ -4,13 +4,14 @@ import Test.Hspec
 import Data.Either (isLeft)
 
 import Lexer.Token
+import Common.SourcePosition
 import Parser.Ast
 import Parser.Monad (ParserError)
 import Parser.Rules (parse)
 
 -- Build a Token with a dummy position
 tok :: TokenKind -> Token
-tok k = Token k (SourcePosition 0 0)
+tok k = makeToken (SourceLocation (SourcePosition 0 0) (SourcePosition 0 0)) k
 
 -- Parse a sequence of TokenKinds
 p :: [TokenKind] -> Either ParserError Expr

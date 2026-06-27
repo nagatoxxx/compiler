@@ -23,17 +23,17 @@ pChar :: Parser Literal
 pChar = LChar <$> match T.asChar
 
 pLiteral :: Parser Literal
-pLiteral = (pInt <|> pFloat <|> pChar <|> pString) <?> "literal"
+pLiteral = pInt <|> pFloat <|> pChar <|> pString <?> "literal"
 
 -- Ident as String
 pIdent :: Parser String
 pIdent = match T.asIdent <?> "identifier"
 
 pAtom :: Parser Expr
-pAtom = ((ELit <$> pLiteral)
+pAtom = (ELit <$> pLiteral)
     <|> (EIdent <$> pIdent)
     <|> (token TLParen *> pExpr <* token TRParen)
-    ) <?> "atom"
+    <?> "atom"
 
 nud :: Parser Expr
 nud = pAtom
@@ -41,8 +41,7 @@ nud = pAtom
   <|> (do
           op <- match T.asOp
           t  <- gets infixOpTable
-          maybe (throwError mempty) (\p -> EApp (EIdent op) <$> pPratt p) (lbp <$> (opInfo op t))
-      )
+          maybe (throwError mempty) (\p -> EApp (EIdent op) <$> pPratt p) (lbp <$> (opInfo op t)))
 
 _pPratt :: Expr -> Int -> Parser Expr
 _pPratt l minBp = do
@@ -68,11 +67,10 @@ pPratt minBp = do
   _pPratt l minBp
 
 pExpr :: Parser Expr
-pExpr = pPratt 0
-    <?> "expr"
+pExpr = pPratt 0 <?> "expr"
 
 pLam :: Parser Expr
-pLam = (ELam <$> (token TBackslash *> some pIdent) <*> (token TArrow *> pExpr)) <?> "lambda"
+pLam = (ELam <$> (token TBackslash *> some pIdent) <*> (token TArrow *> pExpr)) <?> "lambda expression"
 
 parse :: [Token] -> Either ParserError Expr
 parse ts = runExcept

@@ -1,13 +1,14 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Parser.Monad where
-
 import Lexer.Token
+import Common.SourcePosition
 
 import Control.Monad.Except
 import Control.Monad.State
 import Control.Applicative
 import qualified Data.Map as M
+
 
 data ParserState = ParserState
     { tokens        :: [Token]
@@ -15,31 +16,31 @@ data ParserState = ParserState
     , prefixOpTable :: OpTable
     }
 
--- TODO: ParserErrorUnexpected, ParserError... (cannot found op in table)
 data ParserError = ParserError
-    { parserErrPos      :: SourcePosition
-    , parserErrGot      :: TokenKind
-    , parserErrExpected :: String
+    { parserErrToken   :: Token -- which token caused error
+    , parserErrContext :: [String]
     } deriving (Eq)
 
 instance Show ParserError where
   show :: ParserError -> String
-  show e
-    | null (parserErrExpected e) =
-        "unexpected token: got " ++ show (parserErrGot e)
-        ++ " near " ++ show (parserErrPos e)
-    | otherwise =
-        "unexpected token: expected " ++ parserErrExpected e
-        ++ ", got " ++ show (parserErrGot e)
-        ++ " near " ++ show (parserErrPos e)
+  show e = "unexpected " ++ show tok ++ ", expected: " ++ (head stack)
+        ++ concat (map ("\n\t in " ++) (tail stack))
+        ++ "\nnear " ++ show (start . loc $ parserErrToken e)
+           where stack = (parserErrContext e)
+                 tok   = (parserErrToken e)
 
 instance Semigroup ParserError where
-    (<>) :: ParserError -> ParserError -> ParserError
-    a <> _ = a
+  (<>) :: ParserError -> ParserError -> ParserError
+  (<>) a b =
+    let errPos = start . loc . parserErrToken
+    in case compare (errPos a) (errPos b) of
+          GT -> a
+          LT -> b
+          EQ -> a
     
 instance Monoid ParserError where
     mempty :: ParserError
-    mempty = ParserError (SourcePosition 0 0) TEof ""
+    mempty = ParserError (makeToken (SourceLocation (SourcePosition 0 0) (SourcePosition 0 0)) TEof) []
 
 newtype Parser a = Parser
     { runParser :: StateT ParserState (Except ParserError) a }
@@ -48,26 +49,34 @@ newtype Parser a = Parser
 instance Alternative Parser where
     empty :: Parser a
     empty = throwParserError
+    
     (<|>) :: Parser a -> Parser a -> Parser a
     p <|> q = do
-        st <- get
-        catchError p $ \_ -> put st >> q
+        pre <- get
+        catchError p $ \e -> do
+          post <- get
+          if tokens pre == tokens post
+             then put pre >> catchError q (\e2 -> throwError (e <> e2))
+             else throwError e
 
--- TODO: push to grammar stack
+-- tryOrMessage :: Parser a -> String -> Parser a
+-- p `tryOrMessage` m = catchError p (\e -> throwError e { parserErrMsg = Just m })
+
 (<?>) :: Parser a -> String -> Parser a
-p <?> expected = catchError p (\e -> throwError e { parserErrExpected = expected })
+-- p <?> expected = p `tryOrMessage` ("expected: " ++ expected)
+p <?> expected = catchError p (\e -> throwError e { parserErrContext = expected : parserErrContext e })
 
 throwParserError :: Parser a
 throwParserError = do
     t <- peek
-    throwError (ParserError (tokenPos t) (tokenKind t) "")
+    throwError (ParserError t [])
 
 peek :: Parser Token
 peek = do
     st <- get
     case tokens st of
         (t:_) -> return t
-        []    -> return (Token TEof (SourcePosition 0 0))
+        [] -> return (makeToken (SourceLocation (SourcePosition 0 0) (SourcePosition 0 0)) TEof)
 
 next :: Parser Token
 next = do
@@ -79,9 +88,9 @@ next = do
 satisfy :: (TokenKind -> Bool) -> Parser Token
 satisfy p = do
     t <- peek
-    if p (tokenKind t)
+    if p (kind t)
         then next >> return t
-        else throwError (ParserError (tokenPos t) (tokenKind t) "")
+        else throwParserError
 
 token :: TokenKind -> Parser Token
 token tk = satisfy (== tk)
@@ -89,13 +98,11 @@ token tk = satisfy (== tk)
 match :: (TokenKind -> Maybe a) -> Parser a
 match f = do
     t <- peek
-    case f (tokenKind t) of
-        Nothing -> throwError (ParserError (tokenPos t) (tokenKind t) "")
+    case f (kind t) of
+        Nothing -> throwParserError
         Just a  -> next >> return a
 
-data OpAssoc = OpLeft | OpRight
-
-data OpInfo = OpInfix  { rbp :: Int, lbp :: Int }
+data OpInfo = OpInfix  { lbp :: Int, rbp :: Int }
             | OpPrefix { bp :: Int}
             
 type OpTable = M.Map String OpInfo
