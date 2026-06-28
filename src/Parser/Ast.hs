@@ -3,25 +3,29 @@ module Parser.Ast where
 import Common.SourcePosition
 
 data ExprF
-    = EApp Expr Expr
-    -- TODO: переделать 
-    | ELam [String] Expr
-    | EIdent String
+    = EApp Expr Expr   
+    | ELam Ident Expr -- (abstraction var), body
+    | EIdent Ident
     | ELit Literal
-    deriving (Show, Eq)
+    deriving (Eq)
 
-data Literal
+surround :: Char -> Char -> String -> String
+surround b e s = b : s ++ [e]
+
+instance Show ExprF where
+    show :: ExprF -> String
+    show (EIdent i) = "EIdent " ++ (surround '(' ')' $ show (value i))
+    show (ELam p e) = "ELam " ++ (surround '(' ')' $ show (value p) ++ " " ++ show e)
+    show (EApp f x) = "EApp " ++ (surround '(' ')' $ show f ++ " " ++ show x)
+    show (ELit l)   = "ELit " ++ (surround '(' ')' $ show (value l))
+
+data LiteralF
     = LInt Int
     | LFloat Double
     | LString String
     | LChar Char
     deriving (Show, Eq)
 
-type Expr = WithSourceLocation ExprF
-
-instance Show Expr where
-  show :: Expr -> String
-  show (WithSourceLocation l e) = show e ++ " @ " ++ show l
-
-makeExpr :: SourceLocation -> ExprF -> Expr
-makeExpr = WithSourceLocation 
+type Expr    = WithSourceLocation ExprF
+type Ident   = WithSourceLocation String
+type Literal = WithSourceLocation LiteralF

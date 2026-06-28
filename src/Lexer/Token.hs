@@ -1,5 +1,3 @@
-{-# LANGUAGE CPP #-}
-
 module Lexer.Token where
 import Common.SourcePosition
 
@@ -23,17 +21,6 @@ type Token = WithSourceLocation TokenKind
 
 kind :: Token -> TokenKind
 kind t = value t
-
-makeToken :: SourceLocation -> TokenKind -> Token
-makeToken = WithSourceLocation
-
-instance Show Token where
-    show :: Token -> String
-#ifdef DEBUG
-    show t = (show . kind $ t) ++ " (" ++ (show . loc $ t) ++ ")"
-#else
-    show t = (show . kind $ t)
-#endif
 
 asIdent :: TokenKind -> Maybe String
 asIdent (TIdent s) = Just s

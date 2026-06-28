@@ -86,7 +86,7 @@ lexToken = do
     start <- gets pos
     t     <- lexTokenKind
     stop  <- gets pos
-    return (makeToken (SourceLocation start stop) t)
+    return $ t @@ (SourceLocation start stop)
 
 lexTokens :: Lexer [Token]
 lexTokens = do
@@ -95,7 +95,7 @@ lexTokens = do
     case mc of
         Nothing -> do
           p <- gets pos
-          return [makeToken (SourceLocation p p) TEof]
+          return [TEof @@ (SourceLocation p p)]
         Just _  -> do
           t  <- lexToken
           ts <- lexTokens

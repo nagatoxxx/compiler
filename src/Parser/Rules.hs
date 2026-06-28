@@ -11,78 +11,74 @@ import Parser.Ast
 
 import Common.SourcePosition
 
-withLocation :: Parser ExprF -> Parser Expr
+-- TODO use (@@)
+withLocation :: Parser a -> Parser (WithSourceLocation a)
 withLocation p = do
     (WithSourceLocation start _) <- gets (head . tokens)
     e                            <- p
     m                            <- gets lastToken
     let end = maybe (mempty) (loc) m
-    return $ makeExpr (start <> end) e
+    return $ WithSourceLocation (start <> end) e
 
 -- Literal
-pInt :: Parser Literal
+pInt :: Parser LiteralF
 pInt = LInt <$> match T.asInt
 
-pFloat :: Parser Literal
+pFloat :: Parser LiteralF
 pFloat = LFloat <$> match T.asFloat
 
-pString :: Parser Literal
+pString :: Parser LiteralF
 pString = LString <$> match T.asString
 
-pChar :: Parser Literal
+pChar :: Parser LiteralF
 pChar = LChar <$> match T.asChar
 
 pLiteral :: Parser Literal
-pLiteral = pInt <|> pFloat <|> pChar <|> pString <?> "literal"
+pLiteral = (withLocation $ pInt <|> pFloat <|> pChar <|> pString) <?> "literal"
 
 -- Ident as String
-pIdent :: Parser String
-pIdent = match T.asIdent <?> "identifier"
+pIdent :: Parser Ident
+pIdent = withLocation (match T.asIdent) <?> "identifier"
 
 pAtom :: Parser Expr
 pAtom = withLocation
       $ (ELit <$> pLiteral)
-    <|> (EIdent <$> pIdent)
     <|> (value <$> (token TLParen *> pExpr <* token TRParen))
+    <|> EIdent <$> pIdent
     <?> "atom"
 
 nud :: Parser Expr
 nud = pAtom
   <|> pLam
   <|> (do
-          op <- withLocation $ EIdent <$> match T.asOp
-          t  <- gets infixOpTable
-          case value op of
-            EIdent opName -> maybe (throwError mempty)
-                (\p -> do
-                    body <- pPratt p
-                    return $ makeExpr (loc op <> loc body) (EApp op body))
-                (lbp <$> (opInfo (opName)) t)
-            _unreachable -> throwParserError)
+    op   <- withLocation (match T.asOp)  -- Ident = WithSourceLocation String
+    let opExpr = EIdent op @@ loc op     -- Expr
+    t    <- gets infixOpTable
+    maybe (throwError mempty)
+        (\p -> do
+            body <- pPratt p
+            return $ EApp opExpr body @@ (loc opExpr <> loc body))
+        (lbp <$> opInfo (value op) t))
 
 _pPratt :: Expr -> Int -> Parser Expr
 _pPratt l minBp = do
   t <- gets infixOpTable
   do
-    op <- withLocation $ EIdent <$> match T.asOp
-    case value op of
-        EIdent opName -> do
-            info <- maybe (throwError mempty) return (opInfo opName t)
-            case info of
-                OpInfix lb rb -> do
-                    guard (lb > minBp)
-                    r <- pPratt rb
-                    -- l before op
-                    let inner = (makeExpr (loc l <> loc op) (EApp op l))
-                    let outer = makeExpr (loc l <> loc r)  (EApp inner r)
-                    _pPratt outer minBp
-                OpPrefix _ -> throwError mempty
-        _unreachable -> throwError mempty
+    op <- withLocation (match T.asOp)  -- Ident
+    let opExpr = EIdent op @@ loc op   -- Expr
+    info <- maybe (throwError mempty) return (opInfo (value op) t)
+    case info of
+        OpInfix lb rb -> do
+            guard (lb > minBp)
+            r <- pPratt rb
+            let inner = EApp opExpr l @@ (loc l <> loc op)
+            let outer = EApp inner r  @@ (loc l <> loc r)
+            _pPratt outer minBp
+        OpPrefix _ -> throwError mempty
   <|>
   do
     r <- pAtom
-    let app = makeExpr (loc l <> loc r) (EApp l r)
-    _pPratt app minBp
+    _pPratt (EApp l r @@ (loc l <> loc r)) minBp
   <|> return l
 
 pPratt :: Int -> Parser Expr
@@ -95,11 +91,14 @@ pExpr = pPratt 0 <?> "expr"
 
 pLam :: Parser Expr
 pLam = do
-    bs   <- satisfy (== TBackslash)
+    bs     <- satisfy (== TBackslash)
     params <- some pIdent
     _ <- token TArrow
-    body <- pExpr
-    return $ makeExpr (loc bs <> loc body) (ELam params (body))
+    body   <- pExpr
+    return $ foldr
+        (\p e -> ELam p e @@ (loc bs <> loc e))
+        body
+        params
 
 parse :: [Token] -> Either ParserError Expr
 parse ts = runExcept

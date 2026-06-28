@@ -41,7 +41,7 @@ instance Semigroup ParserError where
     
 instance Monoid ParserError where
     mempty :: ParserError
-    mempty = ParserError (makeToken (SourceLocation (SourcePosition 0 0) (SourcePosition 0 0)) TEof) []
+    mempty = ParserError (pure TEof) []
 
 newtype Parser a = Parser
     { runParser :: StateT ParserState (Except ParserError) a }
@@ -73,7 +73,7 @@ peek = do
     st <- get
     case tokens st of
         (t:_) -> return t
-        [] -> return (makeToken (SourceLocation (SourcePosition 0 0) (SourcePosition 0 0)) TEof)
+        [] -> return $ pure TEof
 
 next :: Parser Token
 next = do
