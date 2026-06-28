@@ -1,6 +1,6 @@
 program ::= expr EOF
 
-expr    ::= '\' ident+ '->' expr
+expr    ::= '\' ident+ '.' expr
           | atom+ (op expr)?
 
 atom    ::= literal

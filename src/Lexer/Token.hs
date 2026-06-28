@@ -14,6 +14,7 @@ data TokenKind
     | TRBracket
     | TBackslash
     | TArrow
+    | TDot
     | TEof
     deriving (Show, Eq)
 

@@ -56,13 +56,8 @@ lexChar = TChar <$> (char '\'' *> body <* char '\'')
   where body = char '\\' *> (escapeChar <$> anyOf "nt\\'0")
            <|> noneOf "\\'"
 
-lexPunct :: Lexer TokenKind
-lexPunct =
-    (char '(' *> return TLParen)   <|>
-    (char ')' *> return TRParen)
-
 opChars :: String
-opChars = "+-*/->\\"
+opChars = "+-*/->\\."
 
 lexOp :: Lexer TokenKind
 lexOp = do
@@ -70,7 +65,12 @@ lexOp = do
     case op of
         "->" -> return TArrow
         "\\" -> return TBackslash
+        "."  -> return TDot
         _    -> return (TOp op)
+
+lexPunct :: Lexer TokenKind
+lexPunct = (char '(' *> return TLParen)
+       <|> (char ')' *> return TRParen)
 
 lexTokenKind :: Lexer TokenKind
 lexTokenKind = lexIdent
@@ -78,8 +78,8 @@ lexTokenKind = lexIdent
            <|> lexInt
            <|> lexString
            <|> lexChar
-           <|> lexOp
            <|> lexPunct
+           <|> lexOp
 
 lexToken :: Lexer Token
 lexToken = do

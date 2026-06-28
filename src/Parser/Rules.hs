@@ -93,7 +93,7 @@ pLam :: Parser Expr
 pLam = do
     bs     <- satisfy (== TBackslash)
     params <- some pIdent
-    _ <- token TArrow
+    _ <- token TDot
     body   <- pExpr
     return $ foldr
         (\p e -> ELam p e @@ (loc bs <> loc e))
