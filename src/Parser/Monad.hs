@@ -59,11 +59,7 @@ instance Alternative Parser where
              then put pre >> catchError q (\e2 -> throwError (e <> e2))
              else throwError e
 
--- tryOrMessage :: Parser a -> String -> Parser a
--- p `tryOrMessage` m = catchError p (\e -> throwError e { parserErrMsg = Just m })
-
 (<?>) :: Parser a -> String -> Parser a
--- p <?> expected = p `tryOrMessage` ("expected: " ++ expected)
 p <?> expected = catchError p (\e -> throwError e { parserErrContext = expected : parserErrContext e })
 
 throwParserError :: Parser a

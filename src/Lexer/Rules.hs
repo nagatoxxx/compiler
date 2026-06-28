@@ -94,11 +94,12 @@ lexTokens = do
     mc <- peek
     case mc of
         Nothing -> do
-            return [makeToken (SourceLocation (SourcePosition 0 0) (SourcePosition 0 0)) TEof]
+          p <- gets pos
+          return [makeToken (SourceLocation p p) TEof]
         Just _  -> do
-            t  <- lexToken
-            ts <- lexTokens
-            return (t : ts)
+          t  <- lexToken
+          ts <- lexTokens
+          return (t : ts)
 
 tokenize :: String -> Either LexerError [Token]
 tokenize s = runExcept

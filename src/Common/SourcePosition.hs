@@ -16,10 +16,30 @@ data SourceLocation = SourceLocation
   , stop  :: SourcePosition
   } deriving (Show, Eq)
 
+instance Semigroup SourceLocation where
+  (<>) :: SourceLocation -> SourceLocation -> SourceLocation
+  (<>) = merge
+
+instance Monoid SourceLocation where
+  mempty :: SourceLocation
+  mempty = SourceLocation (SourcePosition 0 0) (SourcePosition 0 0)
+
 data WithSourceLocation a = WithSourceLocation
   { loc   :: SourceLocation
   , value :: a
   } deriving (Eq)
 
-class HasSourceLocation a where
-  getSourceLoc :: a -> SourceLocation
+instance Functor WithSourceLocation where
+  fmap :: (a -> b) -> WithSourceLocation a -> WithSourceLocation b
+  fmap f (WithSourceLocation loc a) = WithSourceLocation loc (f a)
+
+instance Applicative WithSourceLocation where
+  pure :: a -> WithSourceLocation a
+  pure a = WithSourceLocation mempty a
+
+  (<*>) :: WithSourceLocation (a -> b) -> WithSourceLocation a -> WithSourceLocation b
+  WithSourceLocation loc1 f <*> WithSourceLocation loc2 a
+    = WithSourceLocation (loc1 <> loc2) (f a)
+
+merge :: SourceLocation -> SourceLocation -> SourceLocation
+merge a b = SourceLocation (start a) (stop b)

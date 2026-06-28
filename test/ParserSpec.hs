@@ -9,13 +9,11 @@ import Parser.Ast
 import Parser.Monad (ParserError)
 import Parser.Rules (parse)
 
--- Build a Token with a dummy position
 tok :: TokenKind -> Token
 tok k = makeToken (SourceLocation (SourcePosition 0 0) (SourcePosition 0 0)) k
 
--- Parse a sequence of TokenKinds
-p :: [TokenKind] -> Either ParserError Expr
-p = parse . map tok
+p :: [TokenKind] -> Either ParserError ExprF
+p = fmap value . parse . map tok
 
 spec :: Spec
 spec = do

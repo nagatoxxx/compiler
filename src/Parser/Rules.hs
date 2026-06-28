@@ -8,6 +8,14 @@ import Control.Monad.Except
 import Lexer.Token as T
 import Parser.Monad as P
 import Parser.Ast
+import Common.SourcePosition
+
+withLocation :: Parser ExprF -> Parser Expr
+withLocation p = do
+  (WithSourceLocation start _) <- gets (head . tokens)
+  e                            <- p
+  (WithSourceLocation end _)   <- gets (head . tokens)
+  return $ makeExpr (start <> end) e
 
 -- Literal
 pInt :: Parser Literal
@@ -30,35 +38,45 @@ pIdent :: Parser String
 pIdent = match T.asIdent <?> "identifier"
 
 pAtom :: Parser Expr
-pAtom = (ELit <$> pLiteral)
+pAtom = withLocation
+      $ (ELit <$> pLiteral)
     <|> (EIdent <$> pIdent)
-    <|> (token TLParen *> pExpr <* token TRParen)
+    <|> (value <$> (token TLParen *> pExpr <* token TRParen))
     <?> "atom"
 
 nud :: Parser Expr
 nud = pAtom
   <|> pLam
   <|> (do
-          op <- match T.asOp
+          op <- withLocation $ EIdent <$> match T.asOp
           t  <- gets infixOpTable
-          maybe (throwError mempty) (\p -> EApp (EIdent op) <$> pPratt p) (lbp <$> (opInfo op t)))
+          case value op of
+            EIdent opName -> maybe (throwError mempty)
+                (\p -> do
+                    body <- pPratt p -- Expr
+                    return (EApp <$> op <*> body))
+                (lbp <$> (opInfo (opName)) t)
+            _unreachable -> throwParserError)
 
 _pPratt :: Expr -> Int -> Parser Expr
 _pPratt l minBp = do
   t <- gets infixOpTable
   do
-    op  <- match T.asOp
-    info <- maybe (throwError mempty) return (opInfo op t)
-    case info of
-      OpInfix lb rb -> do
-        guard (lb > minBp)
-        right <- pPratt rb
-        _pPratt (EApp (EApp (EIdent op) l) right) minBp
-      OpPrefix _ -> throwError mempty 
+    op <- withLocation $ EIdent <$> match T.asOp
+    case value op of
+        EIdent opName -> do
+            info <- maybe (throwError mempty) return (opInfo opName t)
+            case info of
+                OpInfix lb rb -> do
+                    guard (lb > minBp)
+                    right <- pPratt rb
+                    _pPratt (EApp <$> (EApp <$> op <*> l) <*> right) minBp
+                OpPrefix _ -> throwError mempty
+        _unreachable -> throwError mempty
   <|>
   do
     right <- pAtom
-    _pPratt (EApp l right) minBp
+    _pPratt (EApp <$> l <*> right) minBp
   <|> return l
 
 pPratt :: Int -> Parser Expr
@@ -70,7 +88,12 @@ pExpr :: Parser Expr
 pExpr = pPratt 0 <?> "expr"
 
 pLam :: Parser Expr
-pLam = (ELam <$> (token TBackslash *> some pIdent) <*> (token TArrow *> pExpr)) <?> "lambda expression"
+pLam = do
+    bs   <- satisfy (== TBackslash)
+    params <- some pIdent
+    _ <- token TArrow
+    body <- pExpr
+    return $ makeExpr (loc bs <> loc body) (ELam params (value body))
 
 parse :: [Token] -> Either ParserError Expr
 parse ts = runExcept
