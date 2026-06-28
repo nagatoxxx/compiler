@@ -28,6 +28,7 @@ library
         Parser.Monad
         Parser.Ast
         Parser.Rules
+        Intermediate.Serialization
     build-depends:
         base
       , mtl
@@ -35,7 +36,6 @@ library
     default-language: GHC2021
     if flag(debug)
         cpp-options: -DDEBUG
-
 
 executable Compiler
     import:           warnings
@@ -55,6 +55,7 @@ test-suite tests
     other-modules:
         LexerSpec
         ParserSpec
+        IntermediateSpec
     hs-source-dirs:   test
     build-depends:
         base

@@ -2,6 +2,7 @@ module Main where
 
 import Lexer.Rules
 import Parser.Rules
+import Intermediate.Serialization
 
 import Data.List
 
@@ -19,4 +20,7 @@ main = do
             putStrLn "[parser]"
             case e of
                 Left err   -> putStrLn ("parser error: " ++ show err)
-                Right expr -> print expr
+                Right expr -> do
+                  print expr
+                  putStrLn "[intermediate]"
+                  putStrLn $ serialize expr
