@@ -8,14 +8,16 @@ import Control.Monad.Except
 import Lexer.Token as T
 import Parser.Monad as P
 import Parser.Ast
+
 import Common.SourcePosition
 
 withLocation :: Parser ExprF -> Parser Expr
 withLocation p = do
-  (WithSourceLocation start _) <- gets (head . tokens)
-  e                            <- p
-  (WithSourceLocation end _)   <- gets (head . tokens)
-  return $ makeExpr (start <> end) e
+    (WithSourceLocation start _) <- gets (head . tokens)
+    e                            <- p
+    m                            <- gets lastToken
+    let end = maybe (mempty) (loc) m
+    return $ makeExpr (start <> end) e
 
 -- Literal
 pInt :: Parser Literal
@@ -53,8 +55,8 @@ nud = pAtom
           case value op of
             EIdent opName -> maybe (throwError mempty)
                 (\p -> do
-                    body <- pPratt p -- Expr
-                    return (EApp <$> op <*> body))
+                    body <- pPratt p
+                    return $ makeExpr (loc op <> loc body) (EApp op body))
                 (lbp <$> (opInfo (opName)) t)
             _unreachable -> throwParserError)
 
@@ -69,14 +71,18 @@ _pPratt l minBp = do
             case info of
                 OpInfix lb rb -> do
                     guard (lb > minBp)
-                    right <- pPratt rb
-                    _pPratt (EApp <$> (EApp <$> op <*> l) <*> right) minBp
+                    r <- pPratt rb
+                    -- l before op
+                    let inner = (makeExpr (loc l <> loc op) (EApp op l))
+                    let outer = makeExpr (loc l <> loc r)  (EApp inner r)
+                    _pPratt outer minBp
                 OpPrefix _ -> throwError mempty
         _unreachable -> throwError mempty
   <|>
   do
-    right <- pAtom
-    _pPratt (EApp <$> l <*> right) minBp
+    r <- pAtom
+    let app = makeExpr (loc l <> loc r) (EApp l r)
+    _pPratt app minBp
   <|> return l
 
 pPratt :: Int -> Parser Expr
@@ -93,13 +99,14 @@ pLam = do
     params <- some pIdent
     _ <- token TArrow
     body <- pExpr
-    return $ makeExpr (loc bs <> loc body) (ELam params (value body))
+    return $ makeExpr (loc bs <> loc body) (ELam params (body))
 
 parse :: [Token] -> Either ParserError Expr
 parse ts = runExcept
          $ fst
        <$> runStateT (runParser (pExpr <* (token TEof <?> "end of input"))) initialState
     where initialState = ParserState { tokens        = ts
+                                     , lastToken     = Nothing
                                      , infixOpTable  = defaultInfixOpTable
                                      , prefixOpTable = defaultPrefixOpTable
                                      }

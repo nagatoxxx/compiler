@@ -3,9 +3,9 @@ module Parser.Ast where
 import Common.SourcePosition
 
 data ExprF
-    = EApp ExprF ExprF
+    = EApp Expr Expr
     -- TODO: переделать 
-    | ELam [String] ExprF
+    | ELam [String] Expr
     | EIdent String
     | ELit Literal
     deriving (Show, Eq)

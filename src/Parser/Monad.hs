@@ -12,6 +12,7 @@ import qualified Data.Map as M
 
 data ParserState = ParserState
     { tokens        :: [Token]
+    , lastToken     :: Maybe Token
     , infixOpTable  :: OpTable
     , prefixOpTable :: OpTable
     }
@@ -78,7 +79,7 @@ next :: Parser Token
 next = do
     st <- get
     case tokens st of
-        (t:ts) -> put st { tokens = ts } >> return t
+        (t:ts) -> put st { tokens = ts, lastToken = Just t } >> return t
         []     -> throwParserError
 
 satisfy :: (TokenKind -> Bool) -> Parser Token
