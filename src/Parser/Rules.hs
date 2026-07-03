@@ -11,7 +11,6 @@ import Parser.Ast
 
 import Common.SourcePosition
 
--- TODO use (@@)
 withLocation :: Parser a -> Parser (WithSourceLocation a)
 withLocation p = do
     (WithSourceLocation start _) <- gets (head . tokens)
